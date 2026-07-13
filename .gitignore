@@ -1,0 +1,6 @@
+# IDEs and editors
+.idea/
+
+# OS metadata
+.DS_Store
+Thumbs.db

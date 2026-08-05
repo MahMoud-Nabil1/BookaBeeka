@@ -2,6 +2,7 @@ package com.system.booking.modules.availability.api;
 
 import com.system.booking.modules.inventory.internal.entity.Resource;
 import com.system.booking.modules.tenant.internal.entity.Tenant;
+import com.system.booking.modules.customer.internal.entity.Customer;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
@@ -71,6 +72,16 @@ public class AvailabilityController {
                 .build();
         entityManager.persist(resource);
 
+        // Create dummy customer
+        Customer customer = Customer.builder()
+                .firstName("John")
+                .lastName("Doe")
+                .passwordHash("dummy-hash")
+                .email("john.doe+" + UUID.randomUUID().toString().substring(0, 8) + "@test.com")
+                .phone("+1" + UUID.randomUUID().toString().replaceAll("[^0-9]", "").substring(0, 9))
+                .build();
+        entityManager.persist(customer);
+
         // Create a schedule rule for tomorrow (9 AM to 5 PM)
         short tomorrowDayOfWeek = (short) LocalDate.now().plusDays(1).getDayOfWeek().getValue();
         ScheduleRuleDto rule = new ScheduleRuleDto(
@@ -81,10 +92,28 @@ public class AvailabilityController {
         
         availabilityModuleApi.defineScheduleRule(tenant.getId(), resource.getId(), rule);
 
+        // cancellation policy: 100% refund if 48+ hours before, 70% if less
+        com.system.booking.modules.booking.internal.entity.CancellationPolicy fullRefund =
+                com.system.booking.modules.booking.internal.entity.CancellationPolicy.builder()
+                        .tenantId(tenant.getId())
+                        .hoursBeforeSlot(48)
+                        .refundPercentage(100)
+                        .build();
+        entityManager.persist(fullRefund);
+
+        com.system.booking.modules.booking.internal.entity.CancellationPolicy partialRefund =
+                com.system.booking.modules.booking.internal.entity.CancellationPolicy.builder()
+                        .tenantId(tenant.getId())
+                        .hoursBeforeSlot(0)
+                        .refundPercentage(70)
+                        .build();
+        entityManager.persist(partialRefund);
+
         return ResponseEntity.ok(Map.of(
                 "message", "Test data seeded successfully for tomorrow!",
                 "tenantId", tenant.getId(),
                 "resourceId", resource.getId(),
+                "customerId", customer.getId(),
                 "testDate", LocalDate.now().plusDays(1)
         ));
     }

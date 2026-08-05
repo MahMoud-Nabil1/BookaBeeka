@@ -29,7 +29,7 @@ public class AvailabilityModuleApiImpl implements AvailabilityModuleApi {
     @Override
     public List<SlotDto> getAvailableSlots(UUID tenantId, UUID resourceId, LocalDate date) {
         // Using hardcoded duration and buffer for MVP, could be fetched from Resource settings
-        return slotGenerationService.generateSlots(tenantId, resourceId, date, 60, 15);
+        return slotGenerationService.generateSlots(tenantId, resourceId, date, 60, 0);
     }
 
     @Override
@@ -50,8 +50,11 @@ public class AvailabilityModuleApiImpl implements AvailabilityModuleApi {
 
     @Override
     public boolean isRangeAvailable(UUID tenantId, UUID resourceId, OffsetDateTime start, OffsetDateTime end) {
-        // Delegate to generation service to verify if this exact slot is open
-        return true; // Simplified for MVP
+        // generate all open slots for that day and check if any covers the requested range
+        LocalDate date = start.toLocalDate();
+        List<SlotDto> openSlots = slotGenerationService.generateSlots(tenantId, resourceId, date, 60, 0);
+        return openSlots.stream().anyMatch(slot ->
+                !slot.start().isAfter(start) && !slot.end().isBefore(end));
     }
 
     @Override

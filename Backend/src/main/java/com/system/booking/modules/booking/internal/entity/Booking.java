@@ -1,27 +1,25 @@
 package com.system.booking.modules.booking.internal.entity;
 
 import com.system.booking.common.model.TenantBaseEntity;
-import com.system.booking.modules.customer.internal.entity.Customer;
-import com.system.booking.modules.inventory.internal.entity.Resource;
-import com.system.booking.modules.staff.internal.entity.Staff;
-import com.system.booking.modules.tenant.internal.entity.Branch;
-import com.system.booking.modules.tenant.internal.entity.Tenant;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Table;
-import lombok.Getter;
-import lombok.Setter;
-import lombok.NoArgsConstructor;
+import jakarta.persistence.Version;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
-import java.time.LocalDateTime;
+import java.math.BigDecimal;
+import java.time.OffsetDateTime;
 import java.util.Map;
+import java.util.UUID;
 
 @Getter
 @Setter
@@ -32,34 +30,42 @@ import java.util.Map;
 @Table(name = "booking")
 public class Booking extends TenantBaseEntity {
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "tenant_id", insertable = false, updatable = false)
-    private Tenant tenant;
+    // stripped to plain UUIDs to respect module boundaries
+    @Column(name = "branch_id")
+    private UUID branchId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "branch_id", nullable = false)
-    private Branch branch;
+    @Column(name = "customer_id", nullable = false)
+    private UUID customerId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "customer_id", nullable = false)
-    private Customer customer;
+    @Column(name = "staff_id")
+    private UUID staffId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "staff_id")
-    private Staff staff;
+    @Column(name = "resource_id", nullable = false)
+    private UUID resourceId;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "resource_id")
-    private Resource resource;
+    // references the slot lock used during checkout
+    @Column(name = "lock_id")
+    private UUID lockId;
 
     @Column(name = "start_time", nullable = false)
-    private LocalDateTime startTime;
+    private OffsetDateTime startTime;
 
     @Column(name = "end_time", nullable = false)
-    private LocalDateTime endTime;
+    private OffsetDateTime endTime;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 30)
-    private String status;
+    private BookingStatus status;
+
+    @Column(name = "total_amount", nullable = false, precision = 10, scale = 2)
+    private BigDecimal totalAmount;
+
+    @Column(name = "currency", nullable = false, length = 3)
+    @Builder.Default
+    private String currency = "USD";
+
+    @Column(name = "cancellation_reason", columnDefinition = "text")
+    private String cancellationReason;
 
     @Column(name = "notes", columnDefinition = "text")
     private String notes;
@@ -68,6 +74,13 @@ public class Booking extends TenantBaseEntity {
     private String source;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "settings", columnDefinition = "jsonb")
-    private Map<String, Object> settings;
+    @Column(name = "metadata", columnDefinition = "jsonb")
+    @Builder.Default
+    private Map<String, Object> metadata = Map.of();
+
+    // hibernate uses this for optimistic locking
+    @Version
+    @Column(name = "version", nullable = false)
+    @Builder.Default
+    private Integer version = 0;
 }

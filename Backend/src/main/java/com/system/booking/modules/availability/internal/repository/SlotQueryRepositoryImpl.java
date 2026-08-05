@@ -31,16 +31,21 @@ public class SlotQueryRepositoryImpl implements SlotQueryRepository {
                 ) AS slot_start
                 FROM schedule_rules
                 WHERE resource_id = CAST(:resourceId AS uuid)
-                  AND day_of_week = EXTRACT(DOW FROM CAST(:date AS date))
+                  AND tenant_id = CAST(:tenantId AS uuid)
+                  AND day_of_week = EXTRACT(ISODOW FROM CAST(:date AS date))
             ),
             blocked AS (
                 SELECT tstzrange(start_time, end_time + CAST(:buffer AS interval)) AS range
                 FROM booking
-                WHERE resource_id = CAST(:resourceId AS uuid) AND status != 'CANCELLED'
+                WHERE resource_id = CAST(:resourceId AS uuid)
+                  AND tenant_id = CAST(:tenantId AS uuid)
+                  AND status NOT IN ('CANCELLED', 'EXPIRED')
                 UNION ALL
                 SELECT tstzrange(slot_start, slot_end)
                 FROM slot_locks
-                WHERE resource_id = CAST(:resourceId AS uuid) AND status = 'ACTIVE' AND expires_at > now()
+                WHERE resource_id = CAST(:resourceId AS uuid)
+                  AND tenant_id = CAST(:tenantId AS uuid)
+                  AND status = 'ACTIVE' AND expires_at > now()
             )
             SELECT slot_start, slot_start + CAST(:duration AS interval) AS slot_end
             FROM candidate_slots
@@ -49,13 +54,16 @@ public class SlotQueryRepositoryImpl implements SlotQueryRepository {
             )
             AND NOT EXISTS (
                 SELECT 1 FROM availability_exceptions
-                WHERE resource_id = CAST(:resourceId AS uuid) AND exception_date = CAST(:date AS date) AND is_available = false
+                WHERE resource_id = CAST(:resourceId AS uuid)
+                  AND tenant_id = CAST(:tenantId AS uuid)
+                  AND exception_date = CAST(:date AS date) AND is_available = false
             )
         """;
 
         Query query = entityManager.createNativeQuery(sql)
             .setParameter("date", date)
             .setParameter("resourceId", resourceId.toString())
+            .setParameter("tenantId", tenantId.toString())
             .setParameter("duration", durationMinutes + " minutes")
             .setParameter("buffer", bufferMinutes + " minutes");
 

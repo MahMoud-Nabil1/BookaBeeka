@@ -49,4 +49,6 @@ public class Staff extends TenantBaseEntity {
 
     @Column(name = "is_active", nullable = false)
     private Boolean isActive;
+    @Column(name = "password_hash", nullable = false)
+    private String passwordHash;
 }

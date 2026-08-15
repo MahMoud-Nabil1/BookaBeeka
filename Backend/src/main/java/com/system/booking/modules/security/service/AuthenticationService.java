@@ -5,6 +5,7 @@ import com.system.booking.modules.security.dto.request.StaffLoginRequest;
 import com.system.booking.modules.security.dto.response.LoginResponse;
 import com.system.booking.modules.security.port.in.CustomerAuthenticationPort;
 import com.system.booking.modules.security.port.in.StaffAuthenticationPort;
+import com.system.booking.modules.security.security.UserTypes;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -20,7 +21,6 @@ public class AuthenticationService {
     private final JwtService jwtService;
 
     public LoginResponse authenticateStaff(StaffLoginRequest request) {
-
         var staff = staffPort.findStaffByEmail(request.email())
                 .orElseThrow(() -> new BadCredentialsException("Invalid email or password"));
 
@@ -33,11 +33,10 @@ public class AuthenticationService {
         }
 
         var token = jwtService.generateStaffToken(staff);
-        return new LoginResponse(token, "STAFF");
+        return new LoginResponse(token, UserTypes.STAFF.name());
     }
 
     public LoginResponse authenticateCustomer(CustomerLoginRequest request) {
-
         var customer = customerPort.findCustomerByEmail(request.email())
                 .orElseThrow(() -> new BadCredentialsException("Invalid email or password"));
 
@@ -46,6 +45,6 @@ public class AuthenticationService {
         }
 
         var token = jwtService.generateCustomerToken(customer);
-        return new LoginResponse(token, "CUSTOMER");
+        return new LoginResponse(token, UserTypes.CUSTOMER.name());
     }
 }

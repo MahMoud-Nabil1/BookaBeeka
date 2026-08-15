@@ -1,6 +1,7 @@
 package com.system.booking.modules.availability.api;
 
 import com.system.booking.modules.inventory.internal.entity.Resource;
+import com.system.booking.modules.tenant.internal.entity.Branch;
 import com.system.booking.modules.tenant.internal.entity.Tenant;
 import com.system.booking.modules.customer.internal.entity.Customer;
 import jakarta.persistence.EntityManager;
@@ -54,7 +55,7 @@ public class AvailabilityController {
         entityManager.persist(tenant);
 
         // Create dummy branch
-        com.system.booking.modules.tenant.internal.entity.Branch branch = com.system.booking.modules.tenant.internal.entity.Branch.builder()
+        Branch branch = Branch.builder()
                 .tenantId(tenant.getId())
                 .name("Main Branch")
                 .status("ACTIVE")

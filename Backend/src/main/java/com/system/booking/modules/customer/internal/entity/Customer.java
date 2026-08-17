@@ -9,7 +9,7 @@ import lombok.Setter;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import lombok.experimental.SuperBuilder;
-
+import lombok.Builder;
 @Getter
 @Setter
 @NoArgsConstructor
@@ -33,4 +33,17 @@ public class Customer extends BaseEntity {
 
     @Column(name = "phone", length = 50)
     private String phone;
+
+    /**
+     * Whether this customer account is active.
+     * Set to {@code false} by a SuperAdmin to ban the customer.
+     * Banned customers can still have their existing data read,
+     * but cannot log in (enforced at the auth layer).
+     *
+     * <p>DB migration: {@code ALTER TABLE customer
+     * ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT TRUE;}</p>
+     */
+    @Column(name = "is_active", nullable = false)
+    @Builder.Default
+    private Boolean isActive = true;
 }

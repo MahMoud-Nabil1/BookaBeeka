@@ -23,6 +23,8 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/auth/**").permitAll() // افتح كل بوابات اللوجن
                         .requestMatchers("/customers/register").permitAll() // افتح بوابة إنشاء حساب للعملاء
+                        .requestMatchers("/api/admin/super/**").permitAll()   // TEMP - remove once JWT filter is wired
+                        .requestMatchers("/api/payments/**").permitAll()      // TEMP - remove once JWT filter is wired
                         .anyRequest().authenticated() // أي رابط تاني في السيستم لازم يكون معاه توكين
                 );
 

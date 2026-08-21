@@ -1,0 +1,90 @@
+package com.system.booking.modules.tenant.api;
+
+import com.system.booking.modules.tenant.api.dto.TenantDto;
+import com.system.booking.modules.tenant.api.dto.UpdateTenantRequestDto;
+import com.system.booking.modules.tenant.internal.service.TenantService;
+import io.jsonwebtoken.Claims;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
+
+/**
+ * Tenant REST API — endpoints for tenant owners and public subdomain lookups.
+ *
+ * <p>Base path: {@code /api/tenants}</p>
+ *
+ * <p><b>TODO for security team:</b> Uncomment the {@code @PreAuthorize}
+ * annotations below once the JWT filter populates
+ * {@code SecurityContextHolder} with {@code ROLE_OWNER} for tokens
+ * carrying {@code role = "OWNER"}.</p>
+ */
+@RestController
+@RequestMapping("/api/tenants")
+@RequiredArgsConstructor
+public class TenantController {
+
+    private final TenantService tenantService;
+
+    // -------------------------------------------------------------------------
+    // GET /api/tenants/me
+    // -------------------------------------------------------------------------
+
+    /**
+     * Returns the full profile and settings of the currently authenticated
+     * tenant owner's tenant.
+     *
+     * <p>The {@code tenantId} is extracted from the JWT claims.</p>
+     *
+     * @param claims the JWT claims injected by the security filter
+     * @return 200 OK with {@link TenantDto}
+     */
+    // @PreAuthorize("hasRole('OWNER')")  // TODO: uncomment after JWT filter is wired
+    @GetMapping("/me")
+    public ResponseEntity<TenantDto> getMyTenant(@RequestAttribute("claims") Claims claims) {
+        UUID tenantId = UUID.fromString(claims.get("tenant_id", String.class));
+        return ResponseEntity.ok(tenantService.getTenantById(tenantId));
+    }
+
+    // -------------------------------------------------------------------------
+    // PUT /api/tenants/me
+    // -------------------------------------------------------------------------
+
+    /**
+     * Updates the authenticated tenant owner's business name, timezone,
+     * currency, and/or custom settings.
+     *
+     * @param claims  the JWT claims injected by the security filter
+     * @param request body containing the fields to update (all optional)
+     * @return 200 OK with the updated {@link TenantDto}
+     */
+    // @PreAuthorize("hasRole('OWNER')")  // TODO: uncomment after JWT filter is wired
+    @PutMapping("/me")
+    public ResponseEntity<TenantDto> updateMyTenant(
+            @RequestAttribute("claims") Claims claims,
+            @RequestBody UpdateTenantRequestDto request) {
+        UUID tenantId = UUID.fromString(claims.get("tenant_id", String.class));
+        return ResponseEntity.ok(tenantService.updateTenant(tenantId, request));
+    }
+
+    // -------------------------------------------------------------------------
+    // GET /api/tenants/subdomain/{subdomain}
+    // -------------------------------------------------------------------------
+
+    /**
+     * Public endpoint — resolves a subdomain to its tenant profile.
+     *
+     * <p>The frontend calls this when a customer visits
+     * {@code tenantName.bookabeeka.com} to load tenant-specific branding,
+     * timezone, and settings before the user logs in.</p>
+     *
+     * @param subdomain the tenant's unique subdomain slug
+     * @return 200 OK with {@link TenantDto}
+     */
+    @GetMapping("/subdomain/{subdomain}")
+    public ResponseEntity<TenantDto> getTenantBySubdomain(
+            @PathVariable String subdomain) {
+        return ResponseEntity.ok(tenantService.getTenantBySubdomain(subdomain));
+    }
+}

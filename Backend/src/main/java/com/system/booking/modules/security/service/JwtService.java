@@ -2,6 +2,8 @@ package com.system.booking.modules.security.service;
 
 import com.system.booking.modules.security.dto.CustomerAuthDTO;
 import com.system.booking.modules.security.dto.StaffAuthDTO;
+import com.system.booking.modules.security.security.UserTypes;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
@@ -24,17 +26,17 @@ public class JwtService {
 
     public String generateStaffToken(StaffAuthDTO staff) {
         Map<String, Object> claims = new HashMap<>();
-        claims.put("user_type", "STAFF");
+        claims.put("user_type", UserTypes.STAFF.name());
         claims.put("role", staff.role());
-        claims.put("tenant_id", staff.tenantId());
-        claims.put("branch_id", staff.branchId());
+        claims.put("tenant_id", staff.tenantId() != null ? staff.tenantId().toString() : null);
+        claims.put("branch_id", staff.branchId() != null ? staff.branchId().toString() : null);
 
         return buildToken(claims, staff.id().toString());
     }
 
     public String generateCustomerToken(CustomerAuthDTO customer) {
         Map<String, Object> claims = new HashMap<>();
-        claims.put("user_type", "CUSTOMER");
+        claims.put("user_type", UserTypes.CUSTOMER.name());
 
         return buildToken(claims, customer.id().toString());
     }
@@ -47,6 +49,18 @@ public class JwtService {
                 .expiration(new Date(System.currentTimeMillis() + jwtExpiration))
                 .signWith(getSignInKey(), Jwts.SIG.HS256)
                 .compact();
+    }
+
+    public String extractUsername(String token) {
+        return extractAllClaims(token).getSubject();
+    }
+
+    public Claims extractAllClaims(String token) {
+        return Jwts.parser()
+                .verifyWith(getSignInKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
     }
 
     private SecretKey getSignInKey() {

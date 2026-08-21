@@ -2,23 +2,25 @@ package com.system.booking.modules.tenant.api;
 
 import com.system.booking.modules.tenant.api.dto.TenantDto;
 import com.system.booking.modules.tenant.api.dto.UpdateTenantRequestDto;
+import com.system.booking.modules.tenant.dto.request.CreateTenantRequest;
+import com.system.booking.modules.tenant.dto.response.TenantRegistrationResponse;
+import com.system.booking.modules.tenant.internal.service.TenantRegistrationService;
 import com.system.booking.modules.tenant.internal.service.TenantService;
 import io.jsonwebtoken.Claims;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
 
 /**
- * Tenant REST API — endpoints for tenant owners and public subdomain lookups.
+ * REST controller for tenant management operations.
  *
- * <p>Base path: {@code /api/tenants}</p>
- *
- * <p><b>TODO for security team:</b> Uncomment the {@code @PreAuthorize}
- * annotations below once the JWT filter populates
- * {@code SecurityContextHolder} with {@code ROLE_OWNER} for tokens
- * carrying {@code role = "OWNER"}.</p>
+ * <p>Includes public subdomain lookups, tenant owner profile management,
+ * and SuperAdmin tenant onboarding.</p>
  */
 @RestController
 @RequestMapping("/api/tenants")
@@ -26,6 +28,7 @@ import java.util.UUID;
 public class TenantController {
 
     private final TenantService tenantService;
+    private final TenantRegistrationService tenantRegistrationService;
 
     // -------------------------------------------------------------------------
     // GET /api/tenants/me
@@ -86,5 +89,28 @@ public class TenantController {
     public ResponseEntity<TenantDto> getTenantBySubdomain(
             @PathVariable String subdomain) {
         return ResponseEntity.ok(tenantService.getTenantBySubdomain(subdomain));
+    }
+
+    // -------------------------------------------------------------------------
+    // POST /api/tenants/register
+    // -------------------------------------------------------------------------
+
+    /**
+     * Onboards a new tenant by atomically creating a Tenant, a default Branch,
+     * and an OWNER staff member.
+     *
+     * <p><b>Access:</b> SUPER_ADMIN only (defense-in-depth with both URL-level
+     * and method-level authorization).</p>
+     *
+     * @param request validated onboarding data (tenant + branch + owner info)
+     * @return 201 Created with the registration confirmation
+     */
+    @PostMapping("/register")
+    @PreAuthorize("hasRole('SUPER_ADMIN')")
+    public ResponseEntity<TenantRegistrationResponse> registerTenant(
+            @Valid @RequestBody CreateTenantRequest request
+    ) {
+        TenantRegistrationResponse response = tenantRegistrationService.registerTenant(request);
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 }

@@ -1,33 +1,47 @@
 package com.system.booking.modules.security.config;
 
+import com.system.booking.modules.security.security.CustomAccessDeniedHandler;
+import com.system.booking.modules.security.security.CustomAuthenticationEntryPoint;
+import com.system.booking.modules.security.security.JwtAuthenticationFilter;
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 @Configuration
+@EnableWebSecurity
+@EnableMethodSecurity
+@RequiredArgsConstructor
 public class SecurityConfig {
+
+    private final JwtAuthenticationFilter jwtAuthFilter;
+    private final CorsConfig corsConfig;
+    private final CustomAuthenticationEntryPoint authenticationEntryPoint;
+    private final CustomAccessDeniedHandler accessDeniedHandler;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
-                // 1. بنقفل الـ CSRF عشان إحنا شغالين بـ APIs و JWT مش بـ HTML Forms
                 .csrf(AbstractHttpConfigurer::disable)
-
-                // 2. بنقوله إحنا شغالين Stateless (يعني مفيش Sessions في الميموري، الاعتماد كله ع التوكين)
+                .cors(cors -> cors.configurationSource(corsConfig.corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-
-                // 3. قواعد الدخول (Authorization Rules)
+                .exceptionHandling(exceptions -> exceptions
+                        .authenticationEntryPoint(authenticationEntryPoint)
+                        .accessDeniedHandler(accessDeniedHandler)
+                )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/auth/**").permitAll() // افتح كل بوابات اللوجن
-                        .requestMatchers("/customers/register").permitAll() // افتح بوابة إنشاء حساب للعملاء
-                        .requestMatchers("/api/admin/super/**").permitAll()   // TEMP - remove once JWT filter is wired
-                        .requestMatchers("/api/payments/**").permitAll()      // TEMP - remove once JWT filter is wired
+                        .requestMatchers("/api/auth/**").permitAll()
+                        .requestMatchers("/api/customers/register").permitAll()
                         .requestMatchers("/api/tenants/subdomain/**").permitAll() // public tenant lookup by subdomain
-                        .anyRequest().authenticated() // أي رابط تاني في السيستم لازم يكون معاه توكين
-                );
+                        .anyRequest().authenticated()
+                )
+                .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }

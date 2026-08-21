@@ -20,4 +20,7 @@ public interface TenantRepository extends JpaRepository<Tenant, UUID> {
 
     /** Lookup by subdomain — used during tenant onboarding checks. */
     Optional<Tenant> findBySubdomain(String subdomain);
+
+    /** Checks if subdomain exists. */
+    boolean existsBySubdomain(String subdomain);
 }

@@ -9,6 +9,17 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Optional;
 
+/**
+ * Adapter implementing the {@link StaffAuthenticationPort} (defined in the Security module).
+ *
+ * <p><b>Responsibility:</b> Strictly handles <b>read-only</b> operations for Staff
+ * authentication. This ensures the Security module can retrieve staff credentials
+ * without being coupled to the internal {@code StaffRepository}.</p>
+ *
+ * <p><b>Separation of Concerns:</b> Write operations (such as creating new staff members)
+ * are deliberately excluded from this adapter and are handled by the
+ * {@code StaffProvisioningAdapter} instead.</p>
+ */
 @Service
 @RequiredArgsConstructor
 public class StaffSecurityAdapter implements StaffAuthenticationPort {
@@ -18,15 +29,17 @@ public class StaffSecurityAdapter implements StaffAuthenticationPort {
     @Override
     @Transactional(readOnly = true)
     public Optional<StaffAuthDTO> findStaffByEmail(String email) {
-        // 1. بندور على الموظف في الداتا بيز
+        // Find the staff entity and map it to the DTO expected by the Security module
         return staffRepository.findByEmail(email)
                 .map(staff -> new StaffAuthDTO(
-                        staff.getId(), // موروث من BaseEntity
+                        staff.getId(), // Inherited from BaseEntity
                         staff.getEmail(),
                         staff.getPasswordHash(),
                         staff.getRole(),
-                        staff.getTenantId(), // موروث من TenantBaseEntity
-                        staff.getBranch().getId(), // بنجيب الـ ID بتاع الفرع
+                        staff.getTenantId(), // Inherited from TenantBaseEntity
+                        staff.getBranch().getId(),
+                        staff.getFirstName(),
+                        staff.getLastName(),
                         staff.getIsActive()
                 ));
     }

@@ -43,6 +43,9 @@ public class Booking extends TenantBaseEntity {
     @Column(name = "resource_id", nullable = false)
     private UUID resourceId;
 
+    @Column(name = "service_offering_id")
+    private UUID serviceOfferingId;
+
     // references the slot lock used during checkout
     @Column(name = "lock_id")
     private UUID lockId;

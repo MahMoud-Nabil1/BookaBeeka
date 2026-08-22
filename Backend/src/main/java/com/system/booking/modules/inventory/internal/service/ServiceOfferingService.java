@@ -1,0 +1,97 @@
+package com.system.booking.modules.inventory.internal.service;
+
+import com.system.booking.modules.inventory.internal.dto.CreateServiceOfferingRequest;
+import com.system.booking.modules.inventory.internal.dto.ServiceOfferingResponse;
+import com.system.booking.modules.inventory.internal.dto.UpdateServiceOfferingRequest;
+import com.system.booking.modules.inventory.internal.entity.ServiceOffering;
+import com.system.booking.modules.inventory.internal.exception.ServiceOfferingNotFoundException;
+import com.system.booking.modules.inventory.internal.repository.ServiceOfferingRepository;
+import com.system.booking.modules.tenant.internal.entity.Branch;
+import com.system.booking.modules.tenant.internal.repository.BranchRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
+
+@Service
+@RequiredArgsConstructor
+public class ServiceOfferingService {
+    private final ServiceOfferingRepository serviceOfferingRepository;
+    private final BranchRepository branchRepository;
+
+    @Transactional
+    public ServiceOfferingResponse createServiceOffering(CreateServiceOfferingRequest req) {
+        Branch branch = branchRepository.findById(req.branchId())
+            .filter(b -> b.getTenantId().equals(req.tenantId()))
+            .orElseThrow(() -> new IllegalArgumentException("Branch not found or does not belong to tenant"));
+
+        ServiceOffering offering = ServiceOffering.builder()
+            .tenantId(req.tenantId())
+            .branch(branch)
+            .name(req.name())
+            .price(req.price())
+            .durationMinutes(req.durationMinutes())
+            .bufferMinutes(req.bufferMinutes() != null ? req.bufferMinutes() : 0)
+            .customAttributes(req.customAttributes())
+            .isActive(true)
+            .build();
+            
+        offering = serviceOfferingRepository.save(offering);
+        return toResponse(offering);
+    }
+
+    @Transactional
+    public ServiceOfferingResponse updateServiceOffering(UUID tenantId, UUID serviceOfferingId, UpdateServiceOfferingRequest req) {
+        ServiceOffering offering = serviceOfferingRepository.findByTenantIdAndId(tenantId, serviceOfferingId)
+            .orElseThrow(() -> new ServiceOfferingNotFoundException("Service offering not found"));
+
+        if (req.name() != null) offering.setName(req.name());
+        if (req.price() != null) offering.setPrice(req.price());
+        if (req.durationMinutes() != null) offering.setDurationMinutes(req.durationMinutes());
+        if (req.bufferMinutes() != null) offering.setBufferMinutes(req.bufferMinutes());
+        if (req.customAttributes() != null) offering.setCustomAttributes(req.customAttributes());
+        if (req.isActive() != null) offering.setIsActive(req.isActive());
+
+        offering = serviceOfferingRepository.save(offering);
+        return toResponse(offering);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ServiceOfferingResponse> listServiceOfferings(UUID tenantId) {
+        return serviceOfferingRepository.findByTenantId(tenantId).stream()
+            .map(this::toResponse)
+            .collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public ServiceOfferingResponse getServiceOffering(UUID tenantId, UUID serviceOfferingId) {
+        ServiceOffering offering = serviceOfferingRepository.findByTenantIdAndId(tenantId, serviceOfferingId)
+            .orElseThrow(() -> new ServiceOfferingNotFoundException("Service offering not found"));
+        return toResponse(offering);
+    }
+
+    @Transactional
+    public void deleteServiceOffering(UUID tenantId, UUID serviceOfferingId) {
+        ServiceOffering offering = serviceOfferingRepository.findByTenantIdAndId(tenantId, serviceOfferingId)
+            .orElseThrow(() -> new ServiceOfferingNotFoundException("Service offering not found"));
+        serviceOfferingRepository.delete(offering);
+    }
+
+    private ServiceOfferingResponse toResponse(ServiceOffering o) {
+        return new ServiceOfferingResponse(
+            o.getId(),
+            o.getTenantId(),
+            o.getBranch() != null ? o.getBranch().getId() : null,
+            o.getName(),
+            o.getPrice(),
+            o.getDurationMinutes(),
+            o.getBufferMinutes(),
+            o.getCustomAttributes(),
+            o.getIsActive(),
+            o.getCreatedAt()
+        );
+    }
+}

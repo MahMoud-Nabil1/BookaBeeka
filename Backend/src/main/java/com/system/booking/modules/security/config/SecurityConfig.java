@@ -38,6 +38,11 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/customers/register").permitAll()
+                        .requestMatchers("/api/availability/slots").permitAll()
+                        // temporarily permitAll until admin auth is ready
+                        .requestMatchers("/api/availability/schedule-rules/**").permitAll()
+                        .requestMatchers("/api/availability/exceptions/**").permitAll()
+                        .requestMatchers("/api/inventory/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

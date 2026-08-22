@@ -7,7 +7,7 @@ import java.util.UUID;
 // public contract — other modules only interact with booking through this
 public interface BookingModuleApi {
 
-    BookingConfirmationDto createBooking(CreateBookingRequestDto request, String idempotencyKey);
+    BookingConfirmationDto createBooking(CreateBookingRequestDto request, UUID customerId, String idempotencyKey);
 
     void confirmBooking(UUID tenantId, UUID bookingId);
 

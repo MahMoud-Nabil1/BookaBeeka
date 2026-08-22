@@ -10,6 +10,7 @@ public record BookingDto(
         UUID tenantId,
         UUID customerId,
         UUID resourceId,
+        UUID serviceOfferingId,
         OffsetDateTime startTime,
         OffsetDateTime endTime,
         String status,

@@ -38,6 +38,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/customers/register").permitAll()
+                        .requestMatchers("/api/tenants/register").permitAll()
                         .requestMatchers("/api/tenants/subdomain/**").permitAll() // public tenant lookup by subdomain
                         .anyRequest().authenticated()
                 )

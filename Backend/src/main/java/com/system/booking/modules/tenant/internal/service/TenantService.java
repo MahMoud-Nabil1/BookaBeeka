@@ -1,6 +1,7 @@
 package com.system.booking.modules.tenant.internal.service;
 
 import com.system.booking.modules.tenant.api.TenantModuleApi;
+import com.system.booking.modules.tenant.api.dto.BranchDto;
 import com.system.booking.modules.tenant.api.dto.TenantDto;
 import com.system.booking.modules.tenant.api.dto.UpdateTenantRequestDto;
 import com.system.booking.modules.tenant.internal.entity.Tenant;
@@ -23,6 +24,7 @@ import java.util.UUID;
 public class TenantService implements TenantModuleApi {
 
     private final TenantRepository tenantRepository;
+    private final BranchService branchService;
 
     // -------------------------------------------------------------------------
     // TenantModuleApi implementation (cross-module contract)
@@ -40,6 +42,11 @@ public class TenantService implements TenantModuleApi {
         Tenant tenant = tenantRepository.findBySubdomain(subdomain)
                 .orElseThrow(() -> new EntityNotFoundException("Tenant not found for subdomain: " + subdomain));
         return toDto(tenant);
+    }
+
+    @Override
+    public BranchDto getBranchById(UUID tenantId, UUID branchId) {
+        return branchService.getBranchById(tenantId, branchId);
     }
 
     // -------------------------------------------------------------------------

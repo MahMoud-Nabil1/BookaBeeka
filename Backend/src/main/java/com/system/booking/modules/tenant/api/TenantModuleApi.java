@@ -1,5 +1,6 @@
 package com.system.booking.modules.tenant.api;
 
+import com.system.booking.modules.tenant.api.dto.BranchDto;
 import com.system.booking.modules.tenant.api.dto.TenantDto;
 
 import java.util.UUID;
@@ -30,4 +31,6 @@ public interface TenantModuleApi {
      * @throws jakarta.persistence.EntityNotFoundException if not found
      */
     TenantDto getTenantBySubdomain(String subdomain);
+
+    BranchDto getBranchById(UUID tenantId, UUID branchId);
 }

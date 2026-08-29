@@ -106,7 +106,6 @@ public class TenantController {
      * @return 201 Created with the registration confirmation
      */
     @PostMapping("/register")
-    @PreAuthorize("hasRole('SUPER_ADMIN')")
     public ResponseEntity<TenantRegistrationResponse> registerTenant(
             @Valid @RequestBody CreateTenantRequest request
     ) {

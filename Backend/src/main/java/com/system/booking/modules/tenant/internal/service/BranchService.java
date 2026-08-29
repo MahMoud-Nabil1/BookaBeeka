@@ -57,6 +57,9 @@ public class BranchService {
         if (request.address() != null) {
             branch.setAddress(request.address());
         }
+        if (request.status() != null) {
+            branch.setStatus(request.status());
+        }
         if (request.settings() != null) {
             branch.setSettings(request.settings());
         }

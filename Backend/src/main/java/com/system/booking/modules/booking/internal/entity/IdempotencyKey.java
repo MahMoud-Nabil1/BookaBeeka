@@ -22,7 +22,7 @@ import java.util.UUID;
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "idempotency_key")
+@Table(name = "key")
 @IdClass(IdempotencyKeyId.class)
 public class IdempotencyKey {
 
@@ -31,7 +31,7 @@ public class IdempotencyKey {
     private UUID tenantId;
 
     @Id
-    @Column(name = "key", nullable = false)
+    @Column(name = "idempotency_key", nullable = false)
     private String key;
 
     @Column(name = "response_status")

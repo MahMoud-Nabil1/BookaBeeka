@@ -25,8 +25,8 @@ public class BookingModuleApiImpl implements BookingModuleApi {
 
     @Override
     @Transactional
-    public BookingConfirmationDto createBooking(CreateBookingRequestDto request, String idempotencyKey) {
-        return creationService.createBooking(request, idempotencyKey);
+    public BookingConfirmationDto createBooking(CreateBookingRequestDto request, UUID customerId, String idempotencyKey) {
+        return creationService.createBooking(request, customerId, idempotencyKey);
     }
 
     @Override
@@ -53,11 +53,11 @@ public class BookingModuleApiImpl implements BookingModuleApi {
 
         // create a fresh booking for the new time
         CreateBookingRequestDto newRequest = new CreateBookingRequestDto(
-                tenantId, old.getCustomerId(), old.getResourceId(),
-                newStart, newEnd, old.getTotalAmount(), old.getCurrency());
+                tenantId, old.getResourceId(), old.getServiceOfferingId(),
+                newStart, newEnd);
 
         String rescheduledKey = "reschedule-" + bookingId + "-" + System.currentTimeMillis();
-        BookingConfirmationDto confirmation = creationService.createBooking(newRequest, rescheduledKey);
+        BookingConfirmationDto confirmation = creationService.createBooking(newRequest, old.getCustomerId(), rescheduledKey);
 
         // return the new booking as a full DTO
         Booking newBooking = bookingRepo.findById(confirmation.bookingId())
@@ -85,6 +85,7 @@ public class BookingModuleApiImpl implements BookingModuleApi {
     private BookingDto toDto(Booking b) {
         return new BookingDto(
                 b.getId(), b.getTenantId(), b.getCustomerId(), b.getResourceId(),
+                b.getServiceOfferingId(),
                 b.getStartTime(), b.getEndTime(), b.getStatus().name(),
                 b.getTotalAmount(), b.getCurrency(), b.getCancellationReason(),
                 b.getVersion(),

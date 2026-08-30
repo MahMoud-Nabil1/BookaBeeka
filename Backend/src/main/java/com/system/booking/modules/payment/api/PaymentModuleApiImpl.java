@@ -4,6 +4,8 @@ import com.system.booking.modules.payment.internal.entity.Payment;
 import com.system.booking.modules.payment.internal.entity.WalletTransaction;
 import com.system.booking.modules.payment.internal.service.PaymentHistoryService;
 import com.system.booking.modules.payment.internal.service.WalletPaymentService;
+import com.system.booking.modules.payment.api.PaymentSummaryResponse;
+import com.system.booking.modules.payment.api.RefundEligibilityResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
@@ -73,6 +75,16 @@ public class PaymentModuleApiImpl implements PaymentModuleApi {
     @Override
     public TenantBalanceResponse getTenantBalance(UUID tenantId) {
         return paymentHistoryService.getTenantBalance(tenantId);
+    }
+
+    @Override
+    public PaymentSummaryResponse getPaymentSummaryForBooking(UUID bookingId) {
+        return paymentHistoryService.getPaymentSummaryForBooking(bookingId);
+    }
+
+    @Override
+    public RefundEligibilityResponse getRefundEligibleAmount(UUID paymentId) {
+        return paymentHistoryService.getRefundEligibleAmount(paymentId);
     }
 
     // -------------------------------------------------------------------------

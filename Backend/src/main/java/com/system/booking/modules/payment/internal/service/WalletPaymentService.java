@@ -1,6 +1,7 @@
 package com.system.booking.modules.payment.internal.service;
 
 import com.system.booking.modules.booking.internal.entity.Booking;
+import com.system.booking.modules.customer.internal.entity.Customer;
 import com.system.booking.modules.payment.internal.entity.CustomerWallet;
 import com.system.booking.modules.payment.internal.entity.Payment;
 import com.system.booking.modules.payment.internal.entity.PaymentStatus;
@@ -56,6 +57,15 @@ public class WalletPaymentService {
     @Value("${payment.wallet.max-balance:100000.00}")
     private BigDecimal maxWalletBalance;
 
+    /**
+     * Default currency assigned when a customer's wallet is auto-created on their
+     * first top-up (customer registration does not create one — see
+     * {@link #findOrCreateCustomerWallet}). Override via application.properties:
+     * payment.wallet.default-currency
+     */
+    @Value("${payment.wallet.default-currency:EGP}")
+    private String defaultWalletCurrency;
+
     private final EntityManager               entityManager;
     private final PaymentRepository           paymentRepository;
     private final CustomerWalletRepository    customerWalletRepository;
@@ -70,11 +80,18 @@ public class WalletPaymentService {
     /**
      * Credits the customer's global wallet with the given amount.
      *
+     * <p>If the customer has no wallet yet (customer registration does not create
+     * one — see {@link com.system.booking.modules.customer.internal.service.CustomerService}),
+     * a wallet is auto-created with a zero starting balance in
+     * {@link #defaultWalletCurrency} before the credit is applied. This mirrors
+     * the existing {@link #findOrCreateTenantWallet} behavior for tenant revenue
+     * wallets. {@link #processPayment} and {@link #refundPayment} intentionally do
+     * NOT auto-create — a customer must have topped up at least once before paying.
+     *
      * @param customerId the customer to credit
      * @param amount     positive amount to add
      * @return persisted WalletTransaction ledger entry
      * @throws IllegalArgumentException if amount is negative/zero or would exceed max balance
-     * @throws EntityNotFoundException  if no wallet exists for the customer
      */
     @Transactional(timeout = 10)
     public WalletTransaction topUpWallet(UUID customerId, BigDecimal amount) {
@@ -83,7 +100,7 @@ public class WalletPaymentService {
 
         log.info("Top-up request for customer [{}], amount: {}", customerId, amount);
 
-        CustomerWallet wallet = findWalletWithLock(customerId);
+        CustomerWallet wallet = findOrCreateCustomerWallet(customerId);
 
         // Fix 10: Maximum balance cap — prevents abuse / runaway credits
         BigDecimal newBalance = wallet.getBalance().add(amount);
@@ -186,6 +203,7 @@ public class WalletPaymentService {
             walletTransactionRepository.save(WalletTransaction.builder()
                     .wallet(wallet)
                     .booking(bookingRef)
+                    .payment(payment)                          // audit link: which Payment caused this deduction
                     .amount(paymentAmount)
                     .transactionType(TransactionType.PAYMENT)  // Fix 2: enum
                     .balanceAfter(newBalance)
@@ -259,6 +277,7 @@ public class WalletPaymentService {
         walletTransactionRepository.save(WalletTransaction.builder()
                 .wallet(wallet)
                 .booking(buildBookingRef(bookingId))
+                .payment(payment)                         // audit link: which Payment is being reversed
                 .amount(refundAmount)
                 .transactionType(TransactionType.REFUND)     // Fix 2: enum
                 .balanceAfter(newBalance)
@@ -307,6 +326,32 @@ public class WalletPaymentService {
             tw.setBalance(tw.getBalance().subtract(refundAmount).max(BigDecimal.ZERO));
             tenantWalletRepository.save(tw);
         });
+    }
+
+    /**
+     * Fetches the customer's wallet with a pessimistic lock, creating it with a
+     * zero balance in {@link #defaultWalletCurrency} if this is their first top-up.
+     * Only called from {@link #topUpWallet} — {@link #findWalletWithLock} (used by
+     * {@link #processPayment} / {@link #refundPayment}) still throws when the wallet
+     * is missing, since paying/refunding without ever having topped up is a genuine
+     * error rather than a first-time setup case.
+     *
+     * <p>Known limitation, consistent with {@link #findOrCreateTenantWallet}: two
+     * concurrent first-time top-ups for the same customer could both miss the lock
+     * and both attempt an insert — the DB-level unique constraint on
+     * {@code customer_id} (see {@code CustomerWallet}) turns the second into a
+     * failed request rather than silent data corruption, but it isn't retried here.</p>
+     */
+    private CustomerWallet findOrCreateCustomerWallet(UUID customerId) {
+        return customerWalletRepository.findByCustomerIdWithLock(customerId)
+                .orElseGet(() -> {
+                    log.info("Auto-creating wallet for customer [{}]", customerId);
+                    return customerWalletRepository.save(CustomerWallet.builder()
+                            .customer(entityManager.getReference(Customer.class, customerId))
+                            .balance(BigDecimal.ZERO)
+                            .currency(defaultWalletCurrency)
+                            .build());
+                });
     }
 
     private TenantWallet findOrCreateTenantWallet(UUID tenantId, String currency) {

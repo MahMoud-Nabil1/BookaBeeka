@@ -1,5 +1,6 @@
 package com.system.booking.modules.inventory.internal.dto;
 
+import java.math.BigDecimal;
 import java.util.Map;
 
 public record UpdateResourceRequest(
@@ -8,5 +9,7 @@ public record UpdateResourceRequest(
     Integer capacity,
     Map<String, Object> specs,
     Boolean isActive,
-    Boolean isBookable
+    Boolean isBookable,
+    BigDecimal pricePerNight,
+    String currency
 ) {}

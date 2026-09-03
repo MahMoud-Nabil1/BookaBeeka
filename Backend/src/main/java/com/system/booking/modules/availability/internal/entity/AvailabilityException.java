@@ -47,4 +47,10 @@ public class AvailabilityException extends TenantBaseEntity {
 
     @Column(name = "reason", columnDefinition = "text")
     private String reason;
+
+    @Column(name = "start_date")
+    private LocalDate startDate;
+
+    @Column(name = "end_date")
+    private LocalDate endDate;
 }

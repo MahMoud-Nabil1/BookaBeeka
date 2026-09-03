@@ -17,6 +17,7 @@ import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.Map;
 import java.util.UUID;
@@ -55,6 +56,12 @@ public class Booking extends TenantBaseEntity {
 
     @Column(name = "end_time", nullable = false)
     private OffsetDateTime endTime;
+
+    @Column(name = "check_in")
+    private LocalDate checkIn;
+
+    @Column(name = "check_out")
+    private LocalDate checkOut;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 30)

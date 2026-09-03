@@ -11,6 +11,7 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -40,6 +41,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/customers/register").permitAll()
                         .requestMatchers("/api/tenants/register").permitAll()
                         .requestMatchers("/api/tenants/subdomain/**").permitAll() // public tenant lookup by subdomain
+                        .requestMatchers(HttpMethod.GET, "/api/availability/search").permitAll()
+                        .requestMatchers("/api/inventory/**").hasRole("TENANT_ADMIN")
+                        .requestMatchers("/api/availability/room-blocks/**").hasRole("TENANT_ADMIN")
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

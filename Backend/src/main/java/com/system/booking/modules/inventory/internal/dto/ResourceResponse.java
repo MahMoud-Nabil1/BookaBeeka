@@ -1,5 +1,6 @@
 package com.system.booking.modules.inventory.internal.dto;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.UUID;
@@ -14,5 +15,7 @@ public record ResourceResponse(
     Map<String, Object> specs,
     Boolean isActive,
     Boolean isBookable,
+    BigDecimal pricePerNight,
+    String currency,
     LocalDateTime createdAt
 ) {}

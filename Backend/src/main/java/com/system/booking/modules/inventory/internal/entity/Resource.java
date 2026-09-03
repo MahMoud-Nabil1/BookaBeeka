@@ -9,6 +9,7 @@ import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.NoArgsConstructor;
@@ -17,6 +18,7 @@ import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import java.math.BigDecimal;
 import java.util.Map;
 
 @Getter
@@ -54,4 +56,11 @@ public class Resource extends TenantBaseEntity {
 
     @Column(name = "is_bookable", nullable = false)
     private Boolean isBookable;
+
+    @Column(name = "price_per_night", precision = 12, scale = 2)
+    private BigDecimal pricePerNight;
+
+    @Column(name = "currency", length = 3)
+    @Builder.Default
+    private String currency = "USD";
 }

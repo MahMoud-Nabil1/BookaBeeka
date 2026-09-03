@@ -10,4 +10,5 @@ public interface InventoryModuleApi {
     ServiceOfferingResponse getServiceOfferingByTenantAndId(UUID tenantId, UUID serviceOfferingId);
     ResourceResponse getResourceByTenantAndId(UUID tenantId, UUID resourceId);
     List<ResourceResponse> listResourcesForTenant(UUID tenantId);
+    List<String> listAmenityNamesForResource(UUID resourceId);
 }

@@ -1,9 +1,19 @@
 package com.system.booking.modules.availability.api;
 
+import com.system.booking.modules.availability.api.dto.AvailableRoomResponse;
+import com.system.booking.modules.availability.api.dto.CreateRoomBlockRequest;
+import com.system.booking.modules.availability.api.dto.RoomBlockResponse;
+import com.system.booking.modules.availability.api.dto.RoomSearchRequest;
+import com.system.booking.modules.availability.api.dto.UpdateRoomBlockRequest;
 import com.system.booking.modules.availability.internal.service.AvailabilityExceptionService;
 import com.system.booking.modules.availability.internal.service.ScheduleRuleService;
+import com.system.booking.modules.security.context.TenantContextHolder;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +28,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
@@ -31,6 +42,78 @@ public class AvailabilityController {
     private final AvailabilityModuleApi availabilityModuleApi;
     private final ScheduleRuleService scheduleRuleService;
     private final AvailabilityExceptionService exceptionService;
+
+    // ── Hotel Room Search (public, no auth) ──────────────────────
+
+    @GetMapping("/search")
+    public ResponseEntity<Page<AvailableRoomResponse>> searchAvailableRooms(
+            @RequestParam(required = false) UUID hotelId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkIn,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkOut,
+            @RequestParam(required = false) String roomType,
+            @RequestParam(required = false) String bedType,
+            @RequestParam(required = false) Integer minCapacity,
+            @RequestParam(required = false) BigDecimal minPrice,
+            @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(required = false) List<UUID> amenities,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+
+        if (checkIn == null || checkOut == null) {
+            throw new IllegalArgumentException("checkIn and checkOut are required");
+        }
+        if (!checkIn.isBefore(checkOut)) {
+            throw new IllegalArgumentException("checkIn must be before checkOut");
+        }
+
+        RoomSearchRequest request = new RoomSearchRequest(
+                hotelId, checkIn, checkOut, roomType, bedType,
+                minCapacity, minPrice, maxPrice, amenities
+        );
+
+        Pageable pageable = PageRequest.of(page, size);
+        Page<AvailableRoomResponse> results = availabilityModuleApi.searchAvailableRooms(request, pageable);
+        return ResponseEntity.ok(results);
+    }
+
+    // ── Room Block CRUD (admin, tenant from JWT) ─────────────────
+
+    @PostMapping("/room-blocks")
+    public ResponseEntity<RoomBlockResponse> createRoomBlock(
+            @Valid @RequestBody CreateRoomBlockRequest req) {
+        UUID tenantId = TenantContextHolder.getRequiredContext().tenantId();
+        RoomBlockResponse block = exceptionService.createRoomBlock(tenantId, req);
+        return ResponseEntity.status(HttpStatus.CREATED).body(block);
+    }
+
+    @GetMapping("/room-blocks")
+    public ResponseEntity<List<RoomBlockResponse>> listRoomBlocks() {
+        UUID tenantId = TenantContextHolder.getRequiredContext().tenantId();
+        return ResponseEntity.ok(exceptionService.listRoomBlocks(tenantId));
+    }
+
+    @GetMapping("/room-blocks/{id}")
+    public ResponseEntity<RoomBlockResponse> getRoomBlock(@PathVariable UUID id) {
+        UUID tenantId = TenantContextHolder.getRequiredContext().tenantId();
+        return ResponseEntity.ok(exceptionService.getRoomBlock(tenantId, id));
+    }
+
+    @PutMapping("/room-blocks/{id}")
+    public ResponseEntity<RoomBlockResponse> updateRoomBlock(
+            @PathVariable UUID id,
+            @RequestBody UpdateRoomBlockRequest req) {
+        UUID tenantId = TenantContextHolder.getRequiredContext().tenantId();
+        return ResponseEntity.ok(exceptionService.updateRoomBlock(tenantId, id, req));
+    }
+
+    @DeleteMapping("/room-blocks/{id}")
+    public ResponseEntity<Void> deleteRoomBlock(@PathVariable UUID id) {
+        UUID tenantId = TenantContextHolder.getRequiredContext().tenantId();
+        exceptionService.deleteRoomBlock(tenantId, id);
+        return ResponseEntity.noContent().build();
+    }
+
+    // ── Legacy slot-based endpoints (untouched) ──────────────────
 
     @GetMapping("/slots")
     public ResponseEntity<List<SlotDto>> getSlots(
@@ -145,6 +228,8 @@ public class AvailabilityController {
         return ResponseEntity.noContent().build();
     }
 
+    // ── Exception Handlers ───────────────────────────────────────
+
     @ExceptionHandler(EntityNotFoundException.class)
     public ResponseEntity<Map<String, Object>> handleEntityNotFoundException(EntityNotFoundException e) {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of(
@@ -152,4 +237,13 @@ public class AvailabilityController {
                 "message", e.getMessage() != null ? e.getMessage() : "Entity not found"
         ));
     }
+
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, Object>> handleIllegalArgumentException(IllegalArgumentException e) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+                "error", "Bad Request",
+                "message", e.getMessage() != null ? e.getMessage() : "Invalid request"
+        ));
+    }
 }
+

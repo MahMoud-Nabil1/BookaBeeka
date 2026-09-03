@@ -11,6 +11,8 @@ import com.system.booking.modules.inventory.internal.repository.ResourceServiceL
 import com.system.booking.modules.inventory.internal.repository.ServiceOfferingRepository;
 import com.system.booking.modules.inventory.internal.service.ResourceService;
 import com.system.booking.modules.inventory.internal.service.ServiceOfferingService;
+import com.system.booking.modules.inventory.internal.service.AmenityService;
+import com.system.booking.modules.security.context.TenantContextHolder;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -33,6 +35,7 @@ public class InventoryController {
     private final ResourceServiceLinkRepository resourceServiceLinkRepository;
     private final ResourceRepository resourceRepository;
     private final ServiceOfferingRepository serviceOfferingRepository;
+    private final AmenityService amenityService;
 
     @PostMapping("/resources")
     public ResponseEntity<ResourceResponse> createResource(@Valid @RequestBody CreateResourceRequest req) {
@@ -163,6 +166,66 @@ public class InventoryController {
                 .collect(Collectors.toList());
 
         return ResponseEntity.ok(linkedServices);
+    }
+
+    // ── Amenity CRUD (tenant from JWT via TenantContextHolder) ──
+
+    @PostMapping("/amenities")
+    public ResponseEntity<AmenityResponse> createAmenity(@Valid @RequestBody CreateAmenityRequest req) {
+        UUID tenantId = TenantContextHolder.getRequiredContext().tenantId();
+        return ResponseEntity.status(HttpStatus.CREATED).body(amenityService.createAmenity(tenantId, req));
+    }
+
+    @GetMapping("/amenities")
+    public ResponseEntity<List<AmenityResponse>> listAmenities() {
+        UUID tenantId = TenantContextHolder.getRequiredContext().tenantId();
+        return ResponseEntity.ok(amenityService.listAmenities(tenantId));
+    }
+
+    @GetMapping("/amenities/{id}")
+    public ResponseEntity<AmenityResponse> getAmenity(@PathVariable UUID id) {
+        UUID tenantId = TenantContextHolder.getRequiredContext().tenantId();
+        return ResponseEntity.ok(amenityService.getAmenity(tenantId, id));
+    }
+
+    @PutMapping("/amenities/{id}")
+    public ResponseEntity<AmenityResponse> updateAmenity(
+            @PathVariable UUID id,
+            @RequestBody UpdateAmenityRequest req) {
+        UUID tenantId = TenantContextHolder.getRequiredContext().tenantId();
+        return ResponseEntity.ok(amenityService.updateAmenity(tenantId, id, req));
+    }
+
+    @DeleteMapping("/amenities/{id}")
+    public ResponseEntity<Void> deleteAmenity(@PathVariable UUID id) {
+        UUID tenantId = TenantContextHolder.getRequiredContext().tenantId();
+        amenityService.deleteAmenity(tenantId, id);
+        return ResponseEntity.noContent().build();
+    }
+
+    // ── Resource <-> Amenity linking (tenant from JWT) ──
+
+    @PostMapping("/resources/{resourceId}/amenities/{amenityId}")
+    public ResponseEntity<Void> linkAmenity(
+            @PathVariable UUID resourceId,
+            @PathVariable UUID amenityId) {
+        UUID tenantId = TenantContextHolder.getRequiredContext().tenantId();
+        amenityService.linkAmenityToResource(tenantId, resourceId, amenityId);
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/resources/{resourceId}/amenities/{amenityId}")
+    public ResponseEntity<Void> unlinkAmenity(
+            @PathVariable UUID resourceId,
+            @PathVariable UUID amenityId) {
+        UUID tenantId = TenantContextHolder.getRequiredContext().tenantId();
+        amenityService.unlinkAmenityFromResource(tenantId, resourceId, amenityId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/resources/{resourceId}/amenities")
+    public ResponseEntity<List<AmenityResponse>> listResourceAmenities(@PathVariable UUID resourceId) {
+        return ResponseEntity.ok(amenityService.listAmenitiesForResource(resourceId));
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)

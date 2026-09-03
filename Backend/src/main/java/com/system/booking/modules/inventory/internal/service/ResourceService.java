@@ -37,6 +37,8 @@ public class ResourceService {
             .specs(req.specs())
             .isActive(true)
             .isBookable(true)
+            .pricePerNight(req.pricePerNight())
+            .currency(req.currency() != null ? req.currency() : "USD")
             .build();
             
         resource = resourceRepository.save(resource);
@@ -54,6 +56,8 @@ public class ResourceService {
         if (req.specs() != null) resource.setSpecs(req.specs());
         if (req.isActive() != null) resource.setIsActive(req.isActive());
         if (req.isBookable() != null) resource.setIsBookable(req.isBookable());
+        if (req.pricePerNight() != null) resource.setPricePerNight(req.pricePerNight());
+        if (req.currency() != null) resource.setCurrency(req.currency());
 
         resource = resourceRepository.save(resource);
         return toResponse(resource);
@@ -91,6 +95,8 @@ public class ResourceService {
             r.getSpecs(),
             r.getIsActive(),
             r.getIsBookable(),
+            r.getPricePerNight(),
+            r.getCurrency(),
             r.getCreatedAt()
         );
     }

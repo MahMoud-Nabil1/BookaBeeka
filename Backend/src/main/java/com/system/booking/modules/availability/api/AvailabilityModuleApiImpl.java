@@ -1,4 +1,12 @@
 package com.system.booking.modules.availability.api;
+
+import com.system.booking.modules.availability.api.dto.AvailableRoomResponse;
+import com.system.booking.modules.availability.api.dto.HotelInfo;
+import com.system.booking.modules.availability.api.dto.PricingInfo;
+import com.system.booking.modules.availability.api.dto.RoomInfo;
+import com.system.booking.modules.availability.api.dto.RoomSearchRequest;
+import com.system.booking.modules.availability.api.dto.StayInfo;
+import com.system.booking.modules.availability.internal.repository.RoomAvailabilityRepository;
 import com.system.booking.modules.availability.internal.service.AvailabilityExceptionService;
 import com.system.booking.modules.availability.internal.service.ScheduleRuleService;
 import com.system.booking.modules.availability.internal.service.SlotGenerationService;
@@ -6,13 +14,21 @@ import com.system.booking.modules.availability.internal.service.SlotLockingServi
 import com.system.booking.modules.inventory.internal.entity.Resource;
 import com.system.booking.modules.inventory.api.InventoryModuleApi;
 import com.system.booking.modules.inventory.internal.dto.ServiceOfferingResponse;
+import com.system.booking.modules.inventory.internal.repository.ResourceAmenityRepository;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -23,6 +39,10 @@ public class AvailabilityModuleApiImpl implements AvailabilityModuleApi {
     private final SlotLockingService slotLockingService;
     private final EntityManager entityManager;
     private final InventoryModuleApi inventoryApi;
+    private final RoomAvailabilityRepository roomAvailabilityRepository;
+    private final ResourceAmenityRepository resourceAmenityRepository;
+
+    // ── Legacy slot-based methods (untouched) ────────────────────
 
     @Override
     public List<SlotDto> getAvailableSlots(UUID tenantId, UUID resourceId, LocalDate date) {
@@ -83,4 +103,83 @@ public class AvailabilityModuleApiImpl implements AvailabilityModuleApi {
     public void deleteAvailabilityException(UUID tenantId, UUID exceptionId) {
         exceptionService.deleteException(tenantId, exceptionId);
     }
+
+    // ── Hotel date-range availability ────────────────────────────
+
+    @Override
+    public Page<AvailableRoomResponse> searchAvailableRooms(RoomSearchRequest request, Pageable pageable) {
+        // Normalize amenity IDs to distinct values
+        List<UUID> amenityIds = (request.amenities() != null)
+                ? request.amenities().stream().distinct().collect(Collectors.toList())
+                : null;
+
+        Page<Object[]> rawResults = roomAvailabilityRepository.searchAvailableRooms(
+                request.hotelId(),
+                request.checkIn(),
+                request.checkOut(),
+                request.roomType(),
+                request.bedType(),
+                request.minCapacity(),
+                request.minPrice(),
+                request.maxPrice(),
+                amenityIds,
+                pageable
+        );
+
+        long nights = ChronoUnit.DAYS.between(request.checkIn(), request.checkOut());
+
+        return rawResults.map(row -> mapToResponse(row, request.checkIn(), request.checkOut(), nights));
+    }
+
+    @Override
+    public boolean isRoomAvailableForDates(UUID resourceId, LocalDate checkIn, LocalDate checkOut) {
+        return roomAvailabilityRepository.isRoomAvailable(resourceId, checkIn, checkOut);
+    }
+
+    private AvailableRoomResponse mapToResponse(Object[] row, LocalDate checkIn, LocalDate checkOut, long nights) {
+        UUID roomId = (UUID) row[0];
+        String roomName = (String) row[1];
+        String resourceType = (String) row[2];
+        Integer capacity = row[3] != null ? ((Number) row[3]).intValue() : null;
+        // row[4] = specs (String/PGobject) — pass as-is for now
+        @SuppressWarnings("unchecked")
+        Map<String, Object> specs = null; // JSONB returned as string; parse if needed
+        BigDecimal pricePerNight = row[5] != null ? new BigDecimal(row[5].toString()) : null;
+        String currency = (String) row[6];
+        UUID hotelId = (UUID) row[7];
+        String hotelName = (String) row[8];
+        String subdomain = (String) row[9];
+
+        // Extract bedType from specs if available
+        String bedType = null;
+        if (row[4] != null) {
+            String specsStr = row[4].toString();
+            // Simple JSON parsing for bedType
+            if (specsStr.contains("\"bedType\"")) {
+                int idx = specsStr.indexOf("\"bedType\"");
+                int start = specsStr.indexOf("\"", idx + 10) + 1;
+                int end = specsStr.indexOf("\"", start);
+                if (start > 0 && end > start) {
+                    bedType = specsStr.substring(start, end);
+                }
+            }
+        }
+
+        // Fetch amenity names for this room
+        List<String> amenityNames = resourceAmenityRepository.findByResourceId(roomId).stream()
+                .map(link -> link.getAmenity().getName())
+                .collect(Collectors.toList());
+
+        BigDecimal totalPrice = (pricePerNight != null && nights > 0)
+                ? pricePerNight.multiply(BigDecimal.valueOf(nights))
+                : null;
+
+        return new AvailableRoomResponse(
+                new HotelInfo(hotelId, hotelName, subdomain),
+                new RoomInfo(roomId, resourceType, capacity, bedType, amenityNames, specs),
+                new StayInfo(checkIn, checkOut, (int) nights),
+                new PricingInfo(pricePerNight, totalPrice, currency)
+        );
+    }
 }
+

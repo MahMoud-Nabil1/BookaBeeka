@@ -10,7 +10,7 @@ import com.system.booking.modules.booking.internal.event.BookingCreatedEvent;
 import com.system.booking.modules.booking.internal.exception.SlotUnavailableException;
 import com.system.booking.modules.booking.internal.repository.BookingRepository;
 import com.system.booking.modules.inventory.api.InventoryModuleApi;
-import com.system.booking.modules.inventory.internal.dto.ServiceOfferingResponse;
+import com.system.booking.modules.inventory.internal.dto.response.ServiceOfferingResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;

@@ -4,6 +4,7 @@ import com.system.booking.common.model.TenantBaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -17,7 +18,9 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 @SuperBuilder
 @Entity
-@Table(name = "amenity")
+@Table(name = "amenity", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_amenity_tenant_name", columnNames = {"tenant_id", "name"})
+})
 public class Amenity extends TenantBaseEntity {
 
     @Column(name = "name", nullable = false)
@@ -25,6 +28,9 @@ public class Amenity extends TenantBaseEntity {
 
     @Column(name = "description")
     private String description;
+
+    @Column(name = "icon_url", length = 255)
+    private String iconUrl;
 
     @Column(name = "is_active", nullable = false)
     @Builder.Default

@@ -12,5 +12,9 @@ import java.util.UUID;
 public interface ResourceRepository extends JpaRepository<Resource, UUID> {
     List<Resource> findByTenantId(UUID tenantId);
     List<Resource> findByTenantIdAndBranchId(UUID tenantId, UUID branchId);
+    List<Resource> findByTenantIdAndRoomTypeId(UUID tenantId, UUID roomTypeId);
     Optional<Resource> findByTenantIdAndId(UUID tenantId, UUID id);
+    boolean existsByTenantIdAndBranchIdAndRoomNumber(UUID tenantId, UUID branchId, String roomNumber);
+    boolean existsByTenantIdAndBranchIdAndRoomNumberAndIdNot(UUID tenantId, UUID branchId, String roomNumber, UUID id);
+    boolean existsByTenantIdAndId(UUID tenantId, UUID id);
 }

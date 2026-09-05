@@ -16,11 +16,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 import lombok.experimental.SuperBuilder;
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
 
 import java.math.BigDecimal;
-import java.util.Map;
 
 @Getter
 @Setter
@@ -28,10 +25,10 @@ import java.util.Map;
 @AllArgsConstructor
 @SuperBuilder
 @Entity
-@Table(name = "service", uniqueConstraints = {
-        @UniqueConstraint(name = "uk_service_offering_tenant_branch_name", columnNames = {"tenant_id", "branch_id", "name"})
+@Table(name = "room_type", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_room_type_tenant_branch_name", columnNames = {"tenant_id", "branch_id", "name"})
 })
-public class ServiceOffering extends TenantBaseEntity {
+public class RoomType extends TenantBaseEntity {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tenant_id", insertable = false, updatable = false)
@@ -41,24 +38,17 @@ public class ServiceOffering extends TenantBaseEntity {
     @JoinColumn(name = "branch_id", nullable = false)
     private Branch branch;
 
-    @Column(name = "name", nullable = false)
+    @Column(name = "name", nullable = false, length = 100)
     private String name;
 
     @Column(name = "description", length = 500)
     private String description;
 
-    @Column(name = "price", nullable = false, precision = 12, scale = 2)
-    private BigDecimal price;
+    @Column(name = "capacity", nullable = false)
+    private Integer capacity;
 
-    @Column(name = "duration_minutes")
-    private Integer durationMinutes;
-
-    @Column(name = "buffer_minutes")
-    private Integer bufferMinutes;
-
-    @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "custom_attributes", columnDefinition = "jsonb")
-    private Map<String, Object> customAttributes;
+    @Column(name = "base_price_per_night", nullable = false, precision = 12, scale = 2)
+    private BigDecimal basePricePerNight;
 
     @Column(name = "is_active", nullable = false)
     @Builder.Default

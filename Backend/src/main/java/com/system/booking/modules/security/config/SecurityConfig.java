@@ -42,7 +42,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/tenants/register").permitAll()
                         .requestMatchers("/api/tenants/subdomain/**").permitAll() // public tenant lookup by subdomain
                         .requestMatchers(HttpMethod.GET, "/api/availability/search").permitAll()
-                        .requestMatchers("/api/inventory/**").hasRole("TENANT_ADMIN")
+                        .requestMatchers("/api/inventory/**").hasAnyRole("ADMIN", "STAFF")
                         .requestMatchers("/api/availability/room-blocks/**").hasRole("TENANT_ADMIN")
                         .anyRequest().authenticated()
                 )

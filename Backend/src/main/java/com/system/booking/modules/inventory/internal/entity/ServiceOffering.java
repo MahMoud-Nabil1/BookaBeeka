@@ -1,7 +1,6 @@
 package com.system.booking.modules.inventory.internal.entity;
 
 import com.system.booking.common.model.TenantBaseEntity;
-import com.system.booking.modules.tenant.internal.entity.Branch;
 import com.system.booking.modules.tenant.internal.entity.Tenant;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -22,24 +21,40 @@ import org.hibernate.type.SqlTypes;
 import java.math.BigDecimal;
 import java.util.Map;
 
+/**
+ * Represents a hotel service that can be linked to one or more bookable resources
+ * (e.g., "Breakfast", "Airport Transfer", "Spa Package").
+ *
+ * <p><b>Schema refactoring note — removal of {@code branch_id}:</b><br>
+ * Service offerings were previously associated with individual hotel branches via a
+ * {@code branch_id} foreign key. As part of the inventory unification refactoring,
+ * this concept has been removed. Service offerings are now scoped solely at the
+ * tenant level, reflecting the fact that a hotel's service catalogue is a property-wide
+ * concern rather than a per-branch concern.</p>
+ *
+ * <p><b>Unique constraint — {@code uk_service_offering_tenant_name}:</b><br>
+ * Service names must be unique per tenant to prevent duplicate catalogue entries.
+ * This replaces the former branch-scoped constraint. The service-to-resource linkage
+ * is managed via {@link ResourceServiceLink}, which also carries a {@code tenant_id}
+ * for cross-table isolation enforcement.</p>
+ */
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder
 @Entity
+// Scoped strictly to tenant_id. The branch_id concept has been deprecated and removed from the schema
+// to enforce global tenant isolation — a service offering belongs to a hotel, not to a branch.
 @Table(name = "service", uniqueConstraints = {
-        @UniqueConstraint(name = "uk_service_offering_tenant_branch_name", columnNames = {"tenant_id", "branch_id", "name"})
+        @UniqueConstraint(name = "uk_service_offering_tenant_name", columnNames = {"tenant_id", "name"})
 })
 public class ServiceOffering extends TenantBaseEntity {
 
+    // tenant_id is inherited from TenantBaseEntity and acts as the sole isolation key.
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tenant_id", insertable = false, updatable = false)
     private Tenant tenant;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "branch_id", nullable = false)
-    private Branch branch;
 
     @Column(name = "name", nullable = false)
     private String name;

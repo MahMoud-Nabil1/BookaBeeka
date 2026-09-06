@@ -9,7 +9,6 @@ import java.util.UUID;
 public record ResourceResponse(
         UUID id,
         UUID tenantId,
-        UUID branchId,
         UUID roomTypeId,
         String roomTypeName,
         String name,

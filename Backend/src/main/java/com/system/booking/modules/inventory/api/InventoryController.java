@@ -21,11 +21,29 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
+/**
+ * REST Controller for the Inventory module — Room Types, Resources, Service Offerings, and Amenities.
+ *
+ * <p><b>Multi-Tenancy Design — Implicit Tenant Extraction:</b><br>
+ * No endpoint in this controller accepts a {@code tenantId} from the request body or path.
+ * Instead, the tenant scope is extracted implicitly from the authenticated user's JWT via
+ * {@link TenantContextHolder} (see {@link #getTenantId()}). The JWT's {@code tenant_id}
+ * claim is embedded at login time by the Owner/Admin authentication flow and validated by
+ * the {@code JwtAuthenticationFilter} on every request.</p>
+ *
+ * <p>This design means a caller can never impersonate another tenant by crafting a request
+ * with a different tenant ID — the scope is entirely determined server-side from a
+ * cryptographically signed token.</p>
+ *
+ * <p>Access to all endpoints in this controller is restricted to {@code OWNER} and
+ * {@code ADMIN} roles (enforced in {@code SecurityConfig}).</p>
+ */
 @RestController
 @RequestMapping("/api/inventory")
 @RequiredArgsConstructor
@@ -39,6 +57,15 @@ public class InventoryController {
     private final ResourceRepository resourceRepository;
     private final ServiceOfferingRepository serviceOfferingRepository;
 
+    /**
+     * Extracts the authenticated tenant's ID from the Security Context.
+     *
+     * <p>This is the single point of truth for all tenant-scoping within this controller.
+     * By reading from {@link TenantContextHolder} (which is populated by the
+     * {@code JwtAuthenticationFilter}), we ensure the tenantId is always derived from
+     * the server-side JWT claim — never from a client-supplied request parameter.
+     * Throws {@link IllegalStateException} if called outside a tenant-scoped request.</p>
+     */
     private UUID getTenantId() {
         return TenantContextHolder.getRequiredContext().tenantId();
     }
@@ -53,11 +80,6 @@ public class InventoryController {
     @GetMapping("/room-types")
     public ResponseEntity<List<RoomTypeResponse>> listRoomTypes() {
         return ResponseEntity.ok(roomTypeService.listRoomTypes(getTenantId()));
-    }
-
-    @GetMapping("/room-types/branch/{branchId}")
-    public ResponseEntity<List<RoomTypeResponse>> listRoomTypesByBranch(@PathVariable UUID branchId) {
-        return ResponseEntity.ok(roomTypeService.listRoomTypesByBranch(getTenantId(), branchId));
     }
 
     @GetMapping("/room-types/{id}")
@@ -97,11 +119,6 @@ public class InventoryController {
         return ResponseEntity.ok(resourceService.listResources(getTenantId()));
     }
 
-    @GetMapping("/resources/branch/{branchId}")
-    public ResponseEntity<List<ResourceResponse>> listResourcesByBranch(@PathVariable UUID branchId) {
-        return ResponseEntity.ok(resourceService.listResourcesByBranch(getTenantId(), branchId));
-    }
-
     @GetMapping("/resources/{id}")
     public ResponseEntity<ResourceResponse> getResource(@PathVariable UUID id) {
         return ResponseEntity.ok(resourceService.getResource(getTenantId(), id));
@@ -132,11 +149,6 @@ public class InventoryController {
         return ResponseEntity.ok(serviceOfferingService.listServiceOfferings(getTenantId()));
     }
 
-    @GetMapping("/services/branch/{branchId}")
-    public ResponseEntity<List<ServiceOfferingResponse>> listServiceOfferingsByBranch(@PathVariable UUID branchId) {
-        return ResponseEntity.ok(serviceOfferingService.listServiceOfferingsByBranch(getTenantId(), branchId));
-    }
-
     @GetMapping("/services/{id}")
     public ResponseEntity<ServiceOfferingResponse> getServiceOffering(@PathVariable UUID id) {
         return ResponseEntity.ok(serviceOfferingService.getServiceOffering(getTenantId(), id));
@@ -150,18 +162,32 @@ public class InventoryController {
 
     // ── Resource <-> Service Linking ──
 
+    /**
+     * Links a ServiceOffering to a Resource, enforcing tenant isolation on both sides.
+     *
+     * <p>Both the resource and the service offering are looked up using the caller's
+     * {@code tenantId} (from the JWT). If either entity does not belong to the
+     * authenticated tenant, a 404 is returned — this is intentional rather than a 403,
+     * to avoid leaking the existence of cross-tenant resources.</p>
+     *
+     * <p>The operation is idempotent: if the link already exists, it is returned without
+     * creating a duplicate, preventing {@code DataIntegrityViolationException} on the
+     * {@code uk_resource_service_link} constraint.</p>
+     */
     @Transactional
     @PostMapping("/resources/{resourceId}/link-service/{serviceOfferingId}")
     public ResponseEntity<Void> linkServiceToResource(
             @PathVariable UUID resourceId,
             @PathVariable UUID serviceOfferingId) {
 
+        // tenantId is sourced exclusively from the JWT — the caller cannot supply or override it.
         UUID tenantId = getTenantId();
         Resource resource = resourceRepository.findByTenantIdAndId(tenantId, resourceId)
                 .orElseThrow(() -> new ResourceNotFoundException(resourceId));
         ServiceOffering serviceOffering = serviceOfferingRepository.findByTenantIdAndId(tenantId, serviceOfferingId)
                 .orElseThrow(() -> new ServiceOfferingNotFoundException(serviceOfferingId));
 
+        // Idempotent upsert: skip if the link already exists to avoid constraint violations.
         resourceServiceLinkRepository.findByTenantIdAndResourceIdAndServiceOfferingId(tenantId, resourceId, serviceOfferingId)
                 .orElseGet(() -> {
                     ResourceServiceLink link = ResourceServiceLink.builder()
@@ -175,6 +201,12 @@ public class InventoryController {
         return ResponseEntity.ok().build();
     }
 
+    /**
+     * Unlinks a ServiceOffering from a Resource, enforcing tenant isolation on both sides.
+     *
+     * <p>Both entities are first verified to belong to the calling tenant before deletion.
+     * This prevents a tenant from unlinking resources that don't belong to them.</p>
+     */
     @Transactional
     @DeleteMapping("/resources/{resourceId}/unlink-service/{serviceOfferingId}")
     public ResponseEntity<Void> unlinkServiceFromResource(
@@ -203,10 +235,16 @@ public class InventoryController {
                 .map(link -> {
                     ServiceOffering o = link.getServiceOffering();
                     return new ServiceOfferingResponse(
-                            o.getId(), o.getTenantId(), o.getBranch() != null ? o.getBranch().getId() : null,
-                            o.getName(), o.getDescription(), o.getPrice(), o.getDurationMinutes(), o.getBufferMinutes(),
-                            o.getCustomAttributes(), o.getIsActive(),
-                            o.getCreatedAt() != null ? o.getCreatedAt().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime() : null
+                            o.getId(),
+                            o.getTenantId(),
+                            o.getName(),
+                            o.getDescription(),
+                            o.getPrice(),
+                            o.getDurationMinutes(),
+                            o.getBufferMinutes(),
+                            o.getCustomAttributes(),
+                            o.getIsActive(),
+                            o.getCreatedAt() != null ? o.getCreatedAt().atZone(ZoneId.systemDefault()).toLocalDateTime() : null
                     );
                 })
                 .collect(Collectors.toList());

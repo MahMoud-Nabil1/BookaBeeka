@@ -1,7 +1,6 @@
 package com.system.booking.modules.inventory.internal.entity;
 
 import com.system.booking.common.model.TenantBaseEntity;
-import com.system.booking.modules.tenant.internal.entity.Branch;
 import com.system.booking.modules.tenant.internal.entity.Tenant;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -24,25 +23,42 @@ import org.hibernate.type.SqlTypes;
 import java.math.BigDecimal;
 import java.util.Map;
 
+/**
+ * Represents a bookable physical unit within a hotel tenant's inventory (e.g., a specific room,
+ * meeting room, or other bookable space).
+ *
+ * <p><b>Schema refactoring note — removal of {@code branch_id}:</b><br>
+ * Resources were previously tied to a hotel branch via a {@code branch_id} foreign key,
+ * which introduced unnecessary complexity when querying and filtering inventory. Following
+ * the architectural decision to unify tenant-level isolation, {@code branch_id} has been
+ * fully removed. All data access is now scoped solely through {@code tenant_id}, which is
+ * extracted from the authenticated user's JWT — never from the request payload.</p>
+ *
+ * <p><b>Unique constraint — {@code uk_resource_tenant_room_number}:</b><br>
+ * Room numbers must be unique within a tenant (i.e., a hotel cannot have two rooms numbered "101").
+ * This replaces the former branch-scoped uniqueness constraint, ensuring integrity at the
+ * hotel-property level.</p>
+ */
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @SuperBuilder
 @Entity
+// Scoped strictly to tenant_id. The branch_id concept has been deprecated and removed from the schema
+// to enforce global tenant isolation — a resource belongs to a hotel, not to a branch within it.
 @Table(name = "resource", uniqueConstraints = {
-        @UniqueConstraint(name = "uk_resource_tenant_branch_room_number", columnNames = {"tenant_id", "branch_id", "room_number"})
+        @UniqueConstraint(name = "uk_resource_tenant_room_number", columnNames = {"tenant_id", "room_number"})
 })
 public class Resource extends TenantBaseEntity {
 
+    // tenant_id is inherited from TenantBaseEntity and acts as the sole isolation key.
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "tenant_id", insertable = false, updatable = false)
     private Tenant tenant;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "branch_id", nullable = false)
-    private Branch branch;
-
+    // The RoomType association is validated tenant-locally: when creating or updating a Resource,
+    // the service layer ensures the referenced RoomType belongs to the same tenant_id.
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "room_type_id")
     private RoomType roomType;

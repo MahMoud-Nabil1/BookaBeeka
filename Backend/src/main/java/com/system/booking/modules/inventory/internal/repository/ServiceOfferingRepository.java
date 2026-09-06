@@ -11,8 +11,7 @@ import java.util.UUID;
 @Repository
 public interface ServiceOfferingRepository extends JpaRepository<ServiceOffering, UUID> {
     List<ServiceOffering> findByTenantId(UUID tenantId);
-    List<ServiceOffering> findByTenantIdAndBranchId(UUID tenantId, UUID branchId);
     Optional<ServiceOffering> findByTenantIdAndId(UUID tenantId, UUID id);
-    boolean existsByTenantIdAndBranchIdAndNameIgnoreCase(UUID tenantId, UUID branchId, String name);
-    boolean existsByTenantIdAndBranchIdAndNameIgnoreCaseAndIdNot(UUID tenantId, UUID branchId, String name, UUID id);
+    boolean existsByTenantIdAndNameIgnoreCase(UUID tenantId, String name);
+    boolean existsByTenantIdAndNameIgnoreCaseAndIdNot(UUID tenantId, String name, UUID id);
 }

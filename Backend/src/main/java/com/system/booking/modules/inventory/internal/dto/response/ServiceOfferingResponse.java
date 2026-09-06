@@ -8,7 +8,6 @@ import java.util.UUID;
 public record ServiceOfferingResponse(
         UUID id,
         UUID tenantId,
-        UUID branchId,
         String name,
         String description,
         BigDecimal price,

@@ -7,7 +7,6 @@ import java.util.UUID;
 public record RoomTypeResponse(
         UUID id,
         UUID tenantId,
-        UUID branchId,
         String name,
         String description,
         Integer capacity,

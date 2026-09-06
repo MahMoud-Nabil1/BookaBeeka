@@ -6,12 +6,12 @@ import com.system.booking.modules.security.security.JwtAuthenticationFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.http.HttpMethod;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
@@ -37,13 +37,27 @@ public class SecurityConfig {
                         .accessDeniedHandler(accessDeniedHandler)
                 )
                 .authorizeHttpRequests(auth -> auth
+                        // Public Auth & Onboarding endpoints
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/customers/register").permitAll()
-                        .requestMatchers("/api/tenants/register").permitAll()
-                        .requestMatchers("/api/tenants/subdomain/**").permitAll() // public tenant lookup by subdomain
+                        .requestMatchers("/api/admin/super/login").permitAll()
+                        .requestMatchers("/api/tenants/subdomain/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/availability/search").permitAll()
-                        .requestMatchers("/api/inventory/**").hasAnyRole("ADMIN", "STAFF")
-                        .requestMatchers("/api/availability/room-blocks/**").hasRole("TENANT_ADMIN")
+
+                        // Platform SuperAdmin only
+                        .requestMatchers("/api/admin/super/**").hasRole("SUPER_ADMIN")
+                        .requestMatchers(HttpMethod.POST, "/api/tenants/register").hasRole("SUPER_ADMIN")
+
+                        // Hotel Owner endpoints
+                        .requestMatchers("/api/v1/owner/**").hasRole("OWNER")
+                        .requestMatchers(HttpMethod.GET, "/api/tenants/me").hasRole("OWNER")
+                        .requestMatchers(HttpMethod.PUT, "/api/tenants/me").hasRole("OWNER")
+
+                        // Hotel Management (Owner & Hotel Admin)
+                        .requestMatchers("/api/inventory/**").hasAnyRole("OWNER", "ADMIN")
+                        .requestMatchers("/api/availability/room-blocks/**").hasAnyRole("OWNER", "ADMIN")
+
+                        // Any other request must be authenticated
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);

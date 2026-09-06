@@ -11,6 +11,8 @@ import java.util.UUID;
 @Repository
 public interface AmenityRepository extends JpaRepository<Amenity, UUID> {
     List<Amenity> findByTenantId(UUID tenantId);
-    Optional<Amenity> findByTenantIdAndId(UUID tenantId, UUID id);
     List<Amenity> findByTenantIdAndIsActiveTrue(UUID tenantId);
+    Optional<Amenity> findByTenantIdAndId(UUID tenantId, UUID id);
+    boolean existsByTenantIdAndNameIgnoreCase(UUID tenantId, String name);
+    boolean existsByTenantIdAndNameIgnoreCaseAndIdNot(UUID tenantId, String name, UUID id);
 }

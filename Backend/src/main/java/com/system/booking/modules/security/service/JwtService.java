@@ -1,8 +1,6 @@
 package com.system.booking.modules.security.service;
 
-import com.system.booking.modules.security.dto.CustomerAuthDTO;
-import com.system.booking.modules.security.dto.StaffAuthDTO;
-import com.system.booking.modules.security.security.UserTypes;
+import com.system.booking.modules.security.dto.AuthUserDTO;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
@@ -14,6 +12,7 @@ import javax.crypto.SecretKey;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 public class JwtService {
@@ -24,21 +23,12 @@ public class JwtService {
     @Value("${security.jwt.expiration-time}")
     private long jwtExpiration;
 
-    public String generateStaffToken(StaffAuthDTO staff) {
+    public String generateToken(AuthUserDTO user) {
         Map<String, Object> claims = new HashMap<>();
-        claims.put("user_type", UserTypes.STAFF.name());
-        claims.put("role", staff.role());
-        claims.put("tenant_id", staff.tenantId() != null ? staff.tenantId().toString() : null);
-        claims.put("branch_id", staff.branchId() != null ? staff.branchId().toString() : null);
+        claims.put("role", user.role());
+        claims.put("tenant_id", user.tenantId() != null ? user.tenantId().toString() : null);
 
-        return buildToken(claims, staff.id().toString());
-    }
-
-    public String generateCustomerToken(CustomerAuthDTO customer) {
-        Map<String, Object> claims = new HashMap<>();
-        claims.put("user_type", UserTypes.CUSTOMER.name());
-
-        return buildToken(claims, customer.id().toString());
+        return buildToken(claims, user.id().toString());
     }
 
     private String buildToken(Map<String, Object> extraClaims, String subject) {
@@ -51,16 +41,33 @@ public class JwtService {
                 .compact();
     }
 
-    public String extractUsername(String token) {
-        return extractAllClaims(token).getSubject();
-    }
-
     public Claims extractAllClaims(String token) {
         return Jwts.parser()
                 .verifyWith(getSignInKey())
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();
+    }
+
+    public UUID extractUserId(String token) {
+        return UUID.fromString(extractAllClaims(token).getSubject());
+    }
+
+    public String extractRole(String token) {
+        return extractAllClaims(token).get("role", String.class);
+    }
+
+    public UUID extractTenantId(String token) {
+        String tenantIdStr = extractAllClaims(token).get("tenant_id", String.class);
+        return tenantIdStr != null ? UUID.fromString(tenantIdStr) : null;
+    }
+
+    public boolean isTokenValid(String token) {
+        try {
+            return !extractAllClaims(token).getExpiration().before(new Date());
+        } catch (Exception e) {
+            return false;
+        }
     }
 
     private SecretKey getSignInKey() {

@@ -1,11 +1,13 @@
 package com.system.booking.modules.security.util;
 
 import com.system.booking.modules.security.model.principal.CustomerPrincipal;
-import com.system.booking.modules.security.model.principal.StaffPrincipal;
+import com.system.booking.modules.security.model.principal.HotelUserPrincipal;
 import com.system.booking.modules.security.security.UserTypes;
 import org.springframework.security.authentication.AnonymousAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+
+import java.util.UUID;
 
 public final class SecurityUtil {
 
@@ -13,17 +15,23 @@ public final class SecurityUtil {
         // Utility class — prevent instantiation
     }
 
-    public static StaffPrincipal getCurrentStaffPrincipal() {
+    /**
+     * Retrieves the authenticated HotelUserPrincipal (SuperAdmin, Owner, or Admin).
+     */
+    public static HotelUserPrincipal getCurrentHotelUserPrincipal() {
         Authentication authentication = getRequiredAuthentication();
         Object principal = authentication.getPrincipal();
 
-        if (principal instanceof StaffPrincipal staffPrincipal) {
-            return staffPrincipal;
+        if (principal instanceof HotelUserPrincipal hotelUserPrincipal) {
+            return hotelUserPrincipal;
         }
 
-        throw new IllegalStateException("Expected StaffPrincipal but found: " + getPrincipalClassName(principal));
+        throw new IllegalStateException("Expected HotelUserPrincipal but found: " + getPrincipalClassName(principal));
     }
 
+    /**
+     * Retrieves the authenticated CustomerPrincipal.
+     */
     public static CustomerPrincipal getCurrentCustomerPrincipal() {
         Authentication authentication = getRequiredAuthentication();
         Object principal = authentication.getPrincipal();
@@ -35,12 +43,22 @@ public final class SecurityUtil {
         throw new IllegalStateException("Expected CustomerPrincipal but found: " + getPrincipalClassName(principal));
     }
 
+    /**
+     * Helper to quickly get the current tenant ID from the HotelUserPrincipal.
+     */
+    public static UUID getCurrentTenantId() {
+        return getCurrentHotelUserPrincipal().tenantId();
+    }
+
+    /**
+     * Resolves the current user type (HOTEL_USER or CUSTOMER).
+     */
     public static String getCurrentUserType() {
         Authentication authentication = getRequiredAuthentication();
         Object principal = authentication.getPrincipal();
 
         return switch (principal) {
-            case StaffPrincipal ignored -> UserTypes.STAFF.name();
+            case HotelUserPrincipal ignored -> UserTypes.HOTEL_USER.name();
             case CustomerPrincipal ignored -> UserTypes.CUSTOMER.name();
             default -> throw new IllegalStateException("Unknown principal type: " + getPrincipalClassName(principal));
         };

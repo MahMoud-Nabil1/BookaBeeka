@@ -13,7 +13,7 @@ import com.system.booking.modules.availability.internal.service.SlotGenerationSe
 import com.system.booking.modules.availability.internal.service.SlotLockingService;
 import com.system.booking.modules.inventory.internal.entity.Resource;
 import com.system.booking.modules.inventory.api.InventoryModuleApi;
-import com.system.booking.modules.inventory.internal.dto.ServiceOfferingResponse;
+import com.system.booking.modules.inventory.internal.dto.response.ServiceOfferingResponse;
 import com.system.booking.modules.inventory.internal.repository.ResourceAmenityRepository;
 import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;

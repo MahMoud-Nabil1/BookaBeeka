@@ -14,6 +14,6 @@ import java.util.UUID;
  * Customer requests — Customers have global access with no tenant scope.</p>
  */
 public record TenantContext(
-        UUID tenantId,
-        UUID branchId
+        UUID tenantId
+
 ) {}

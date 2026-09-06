@@ -1,9 +1,8 @@
 package com.system.booking.modules.tenant.internal.service;
 
 import com.system.booking.modules.tenant.api.TenantModuleApi;
-import com.system.booking.modules.tenant.api.dto.BranchDto;
-import com.system.booking.modules.tenant.api.dto.TenantDto;
-import com.system.booking.modules.tenant.api.dto.UpdateTenantRequestDto;
+import com.system.booking.modules.tenant.internal.dto.TenantDto;
+import com.system.booking.modules.tenant.internal.dto.UpdateTenantRequestDto;
 import com.system.booking.modules.tenant.internal.entity.Tenant;
 import com.system.booking.modules.tenant.internal.repository.TenantRepository;
 import jakarta.persistence.EntityNotFoundException;
@@ -13,22 +12,11 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.UUID;
 
-/**
- * Core tenant business logic.
- *
- * <p>Implements {@link TenantModuleApi} so other modules can inject the
- * interface for cross-module tenant lookups.</p>
- */
 @Service
 @RequiredArgsConstructor
 public class TenantService implements TenantModuleApi {
 
     private final TenantRepository tenantRepository;
-    private final BranchService branchService;
-
-    // -------------------------------------------------------------------------
-    // TenantModuleApi implementation (cross-module contract)
-    // -------------------------------------------------------------------------
 
     @Override
     public TenantDto getTenantById(UUID tenantId) {
@@ -44,22 +32,6 @@ public class TenantService implements TenantModuleApi {
         return toDto(tenant);
     }
 
-    @Override
-    public BranchDto getBranchById(UUID tenantId, UUID branchId) {
-        return branchService.getBranchById(tenantId, branchId);
-    }
-
-    // -------------------------------------------------------------------------
-    // Controller-facing methods
-    // -------------------------------------------------------------------------
-
-    /**
-     * Updates a tenant's profile fields. Only non-null values are applied.
-     *
-     * @param tenantId the tenant's UUID (from JWT)
-     * @param request  the fields to update
-     * @return the updated tenant DTO
-     */
     @Transactional
     public TenantDto updateTenant(UUID tenantId, UpdateTenantRequestDto request) {
         Tenant tenant = tenantRepository.findById(tenantId)
@@ -81,10 +53,6 @@ public class TenantService implements TenantModuleApi {
         Tenant saved = tenantRepository.save(tenant);
         return toDto(saved);
     }
-
-    // -------------------------------------------------------------------------
-    // Mapper
-    // -------------------------------------------------------------------------
 
     private TenantDto toDto(Tenant tenant) {
         return new TenantDto(

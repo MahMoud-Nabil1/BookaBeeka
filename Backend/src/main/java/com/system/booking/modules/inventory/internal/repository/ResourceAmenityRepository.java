@@ -11,6 +11,10 @@ import java.util.UUID;
 @Repository
 public interface ResourceAmenityRepository extends JpaRepository<ResourceAmenity, UUID> {
     List<ResourceAmenity> findByResourceId(UUID resourceId);
+    List<ResourceAmenity> findByTenantIdAndResourceId(UUID tenantId, UUID resourceId);
     Optional<ResourceAmenity> findByResourceIdAndAmenityId(UUID resourceId, UUID amenityId);
+    Optional<ResourceAmenity> findByTenantIdAndResourceIdAndAmenityId(UUID tenantId, UUID resourceId, UUID amenityId);
+    boolean existsByTenantIdAndResourceIdAndAmenityId(UUID tenantId, UUID resourceId, UUID amenityId);
     void deleteByResourceIdAndAmenityId(UUID resourceId, UUID amenityId);
+    void deleteByTenantIdAndResourceIdAndAmenityId(UUID tenantId, UUID resourceId, UUID amenityId);
 }

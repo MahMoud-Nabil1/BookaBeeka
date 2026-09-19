@@ -9,7 +9,7 @@ public record BookingCreatedEvent(
         UUID bookingId,
         UUID tenantId,
         UUID customerId,
-        UUID resourceId,
+        UUID roomId,       // hotel room that was booked
         BigDecimal totalAmount,
         OffsetDateTime createdAt
 ) {}

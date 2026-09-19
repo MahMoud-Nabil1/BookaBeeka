@@ -2,8 +2,11 @@ package com.system.booking.common.exception;
 
 import com.system.booking.modules.payment.internal.exception.InsufficientBalanceException;
 import jakarta.persistence.EntityNotFoundException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -31,6 +34,8 @@ import java.util.Map;
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
     // -------------------------------------------------------------------------
     // 400 Bad Request — Bean Validation failures (@Valid on request body)
@@ -116,20 +121,38 @@ public class GlobalExceptionHandler {
     }
 
     // -------------------------------------------------------------------------
+    // 401 Unauthorized — wrong credentials
+    // -------------------------------------------------------------------------
+
+    /**
+     * Fires when login credentials are invalid or the account is disabled.
+     * Returns 401 instead of letting it bubble up to the generic 500 handler.
+     */
+    @ExceptionHandler(BadCredentialsException.class)
+    public ResponseEntity<Map<String, Object>> handleBadCredentials(BadCredentialsException ex) {
+        return buildResponse(
+                HttpStatus.UNAUTHORIZED,
+                "Authentication failed",
+                ex.getMessage()
+        );
+    }
+
+    // -------------------------------------------------------------------------
     // 500 Internal Server Error — unexpected failures
     // -------------------------------------------------------------------------
 
     /**
      * Catch-all for anything not handled above.
-     * Does NOT expose the stack trace — only a generic message.
+     * Logs the real exception for server-side visibility without leaking details to clients.
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex) {
-        ex.printStackTrace();
+        log.error("Unhandled exception [{}]: {}", ex.getClass().getSimpleName(), ex.getMessage(), ex);
+        // TODO: remove debug details before production
         return buildResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR,
-                "An unexpected error occurred",
-                "Please contact support if this problem persists."
+                ex.getClass().getSimpleName() + ": " + ex.getMessage(),
+                ex.getCause() != null ? ex.getCause().getMessage() : "No further cause"
         );
     }
 

@@ -87,4 +87,20 @@ public class PaymentHistoryController {
         TenantBalanceResponse balance = paymentModuleApi.getTenantBalance(tenantId);
         return ResponseEntity.ok(balance);
     }
+    // -------------------------------------------------------------------------
+// GET /api/payments/booking/{bookingId}/summary
+// -------------------------------------------------------------------------
+
+    /**
+     * Returns a lightweight payment status summary for a single booking —
+     * used by the admin dashboard. Returns cleanly (status = "UNPAID") even
+     * when no Payment record exists yet.
+     */
+    @GetMapping("/booking/{bookingId}/summary")
+    public ResponseEntity<PaymentSummaryResponse> getPaymentSummary(
+            @PathVariable UUID bookingId) {
+
+        PaymentSummaryResponse summary = paymentModuleApi.getPaymentSummaryForBooking(bookingId);
+        return ResponseEntity.ok(summary);
+    }
 }

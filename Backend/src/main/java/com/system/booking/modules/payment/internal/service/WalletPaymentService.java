@@ -1,5 +1,6 @@
 package com.system.booking.modules.payment.internal.service;
 
+import com.system.booking.modules.booking.api.BookingModuleApi;
 import com.system.booking.modules.booking.internal.entity.Booking;
 import com.system.booking.modules.customer.internal.entity.Customer;
 import com.system.booking.modules.payment.internal.entity.CustomerWallet;
@@ -72,6 +73,7 @@ public class WalletPaymentService {
     private final WalletTransactionRepository walletTransactionRepository;
     private final TenantWalletRepository      tenantWalletRepository;
     private final PaymentAuditService         paymentAuditService;
+    private final BookingModuleApi            bookingModuleApi;
 
     // -------------------------------------------------------------------------
     // Scenario 1: Wallet Top-Up (Deposit)
@@ -215,6 +217,9 @@ public class WalletPaymentService {
 
             creditTenantWallet(tenantId, paymentAmount, wallet.getCurrency());
 
+            // Confirm the booking now that payment has cleared: PENDING_PAYMENT → CONFIRMED
+            bookingModuleApi.confirmBooking(tenantId, bookingId);
+
             log.info("Payment COMPLETED for booking [{}]. Customer balance: {}", bookingId, newBalance);
             return payment;
         }
@@ -288,6 +293,9 @@ public class WalletPaymentService {
         payment = paymentRepository.save(payment);
 
         debitTenantWallet(tenantId, refundAmount);
+
+        // Cancel the booking now that the refund has been issued: status → CANCELLED
+        bookingModuleApi.cancelBooking(tenantId, bookingId, "Payment refunded", null);
 
         log.info("Refund COMPLETED for booking [{}]. Amount: {}, Customer new balance: {}",
                 bookingId, refundAmount, newBalance);

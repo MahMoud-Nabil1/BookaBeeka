@@ -46,7 +46,7 @@ public class BookingLifecycleService {
 
         eventPublisher.publishEvent(new BookingConfirmedEvent(
                 booking.getId(), tenantId, booking.getCustomerId(),
-                booking.getResourceId(), booking.getStartTime(), booking.getEndTime()));
+                booking.getRoomId(), booking.getStartTime(), booking.getEndTime()));
 
         log.info("Booking {} confirmed", bookingId);
     }

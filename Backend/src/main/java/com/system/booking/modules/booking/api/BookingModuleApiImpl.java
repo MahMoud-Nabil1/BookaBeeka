@@ -37,6 +37,12 @@ public class BookingModuleApiImpl implements BookingModuleApi {
 
     @Override
     @Transactional
+    public void completeBooking(UUID bookingId) {
+        lifecycleService.completeBooking(bookingId);
+    }
+
+    @Override
+    @Transactional
     public CancellationResultDto cancelBooking(UUID tenantId, UUID bookingId, String reason, UUID actorId) {
         return lifecycleService.cancelBooking(tenantId, bookingId, reason, actorId);
     }
@@ -53,8 +59,10 @@ public class BookingModuleApiImpl implements BookingModuleApi {
 
         // create a fresh booking for the new time
         CreateBookingRequestDto newRequest = new CreateBookingRequestDto(
-                tenantId, old.getResourceId(), old.getServiceOfferingId(),
-                newStart, newEnd);
+                tenantId, old.getRoomId(), old.getServiceOfferingId(),
+                newStart, newEnd,
+                null, null,   // checkInDate / checkOutDate — not carried over in reschedule
+                old.getNumberOfRooms(), old.getSpecialRequests(), old.getMetadata());
 
         String rescheduledKey = "reschedule-" + bookingId + "-" + System.currentTimeMillis();
         BookingConfirmationDto confirmation = creationService.createBooking(newRequest, old.getCustomerId(), rescheduledKey);
@@ -74,6 +82,13 @@ public class BookingModuleApiImpl implements BookingModuleApi {
     }
 
     @Override
+    public BookingDto getBookingById(UUID tenantId, UUID bookingId) {
+        Booking booking = bookingRepo.findByTenantIdAndId(tenantId, bookingId)
+                .orElseThrow(() -> new EntityNotFoundException("Booking not found: " + bookingId));
+        return toDto(booking);
+    }
+
+    @Override
     public List<BookingDto> listBookingsForCustomer(UUID tenantId, UUID customerId) {
         return bookingRepo.findByTenantIdAndCustomerId(tenantId, customerId)
                 .stream()
@@ -84,10 +99,14 @@ public class BookingModuleApiImpl implements BookingModuleApi {
     // maps entity to DTO
     private BookingDto toDto(Booking b) {
         return new BookingDto(
-                b.getId(), b.getTenantId(), b.getCustomerId(), b.getResourceId(),
+                b.getId(), b.getTenantId(), b.getCustomerId(), b.getRoomId(),
                 b.getServiceOfferingId(),
-                b.getStartTime(), b.getEndTime(), b.getStatus().name(),
-                b.getTotalAmount(), b.getCurrency(), b.getCancellationReason(),
+                b.getStartTime(), b.getEndTime(),
+                b.getCheckIn(), b.getCheckOut(),
+                b.getNumberOfRooms(),
+                b.getStatus().name(),
+                b.getTotalAmount(), b.getCurrency(),
+                b.getSpecialRequests(), b.getCancellationReason(),
                 b.getVersion(),
                 b.getCreatedAt() != null ? b.getCreatedAt().atOffset(ZoneOffset.UTC) : null);
     }

@@ -11,11 +11,15 @@ public interface BookingModuleApi {
 
     void confirmBooking(UUID tenantId, UUID bookingId);
 
+    void completeBooking(UUID bookingId);
+
     CancellationResultDto cancelBooking(UUID tenantId, UUID bookingId, String reason, UUID actorId);
 
     BookingDto rescheduleBooking(UUID tenantId, UUID bookingId, OffsetDateTime newStart, OffsetDateTime newEnd);
 
     BookingStatusDto getBookingStatus(UUID tenantId, UUID bookingId);
+
+    BookingDto getBookingById(UUID tenantId, UUID bookingId);
 
     List<BookingDto> listBookingsForCustomer(UUID tenantId, UUID customerId);
 }

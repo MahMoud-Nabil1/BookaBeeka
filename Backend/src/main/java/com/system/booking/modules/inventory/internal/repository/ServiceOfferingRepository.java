@@ -12,4 +12,6 @@ import java.util.UUID;
 public interface ServiceOfferingRepository extends JpaRepository<ServiceOffering, UUID> {
     List<ServiceOffering> findByTenantId(UUID tenantId);
     Optional<ServiceOffering> findByTenantIdAndId(UUID tenantId, UUID id);
+    boolean existsByTenantIdAndNameIgnoreCase(UUID tenantId, String name);
+    boolean existsByTenantIdAndNameIgnoreCaseAndIdNot(UUID tenantId, String name, UUID id);
 }

@@ -43,4 +43,21 @@ public interface PaymentRepository extends JpaRepository<Payment, UUID> {
      * All payment state transitions for a single booking (PENDING→COMPLETED→REFUNDED).
      */
     List<Payment> findByBookingIdOrderByCreatedAtDesc(UUID bookingId);
+
+    /**
+     * Fetches a single Payment by its own ID, eagerly loading the Booking in the same
+     * query. Used by the refund-eligibility check which needs booking.totalAmount and
+     * booking.tenantId to compute the applicable cancellation-policy tier.
+     */
+    @Query("SELECT p FROM Payment p JOIN FETCH p.booking WHERE p.id = :paymentId")
+    Optional<Payment> findByIdWithBooking(@Param("paymentId") UUID paymentId);
+
+    /**
+     * Platform-wide paginated feed of payments by status — used by SuperAdmin.
+     * Most common call: {@code status = FAILED} to populate the failed-payment feed.
+     */
+    Page<Payment> findByStatusOrderByCreatedAtDesc(PaymentStatus status, Pageable pageable);
+
+    /** Count of payments in a given status — used for SuperAdmin KPI stats. */
+    long countByStatus(PaymentStatus status);
 }

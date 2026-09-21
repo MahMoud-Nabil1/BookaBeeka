@@ -31,4 +31,4 @@ public record CustomerRegisterRequest(
 
         /** Phone number — optional during registration. */
         String phone
-) {}
+) {}

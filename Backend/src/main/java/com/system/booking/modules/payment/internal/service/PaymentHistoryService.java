@@ -1,7 +1,12 @@
 package com.system.booking.modules.payment.internal.service;
 
+import com.system.booking.modules.booking.internal.entity.CancellationPolicy;
+import com.system.booking.modules.booking.internal.repository.BookingRepository;
+import com.system.booking.modules.booking.internal.repository.CancellationPolicyRepository;
 import com.system.booking.modules.payment.api.CustomerBalanceResponse;
 import com.system.booking.modules.payment.api.CustomerTransactionDetail;
+import com.system.booking.modules.payment.api.PaymentSummaryResponse;
+import com.system.booking.modules.payment.api.RefundEligibilityResponse;
 import com.system.booking.modules.payment.api.TenantBalanceResponse;
 import com.system.booking.modules.payment.api.TenantPaymentDetail;
 import com.system.booking.modules.payment.internal.entity.Payment;
@@ -22,6 +27,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.time.OffsetDateTime;
+import java.util.List;
 import java.util.UUID;
 
 /**
@@ -45,6 +53,8 @@ public class PaymentHistoryService {
     private final PaymentRepository           paymentRepository;
     private final TenantWalletRepository      tenantWalletRepository;
     private final CustomerWalletRepository    customerWalletRepository;
+    private final BookingRepository           bookingRepository;
+    private final CancellationPolicyRepository cancellationPolicyRepository;
 
     // -------------------------------------------------------------------------
     // Customer history (paginated)
@@ -118,6 +128,116 @@ public class PaymentHistoryService {
                 wallet.getBalance(),
                 wallet.getCurrency(),
                 wallet.getUpdatedAt());
+    }
+
+    // -------------------------------------------------------------------------
+    // Payment summary for booking (dashboard: booking-detail view)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Returns the payment state of a booking in a single call.
+     *
+     * <p>If no Payment record exists yet the response still returns cleanly:
+     * {@code paymentId} is null, {@code amountPaid} is zero, and
+     * {@code status} is {@code "UNPAID"}.</p>
+     *
+     * @param bookingId UUID of the booking to summarise
+     * @return amountPaid / totalDue / status
+     */
+    @Transactional(readOnly = true)
+    public PaymentSummaryResponse getPaymentSummaryForBooking(UUID bookingId) {
+        // totalDue comes from the Booking record itself
+        var booking = bookingRepository.findById(bookingId)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Booking not found: " + bookingId));
+
+        // Most recent payment for this booking (COMPLETED/REFUNDED takes priority over PENDING)
+        List<Payment> payments = paymentRepository.findByBookingIdOrderByCreatedAtDesc(bookingId);
+
+        if (payments.isEmpty()) {
+            return new PaymentSummaryResponse(
+                    null,
+                    bookingId,
+                    BigDecimal.ZERO,
+                    booking.getTotalAmount(),
+                    "UNPAID");
+        }
+
+        // The first entry is the newest — use it for status and amount
+        Payment latest = payments.get(0);
+        return new PaymentSummaryResponse(
+                latest.getId(),
+                bookingId,
+                latest.getAmount(),
+                booking.getTotalAmount(),
+                latest.getStatus().name());
+    }
+
+    // -------------------------------------------------------------------------
+    // Refund eligibility (dashboard: before showing "Trigger Refund" button)
+    // -------------------------------------------------------------------------
+
+    /**
+     * Computes how much of a payment is refundable under the tenant's cancellation
+     * policy at the moment this method is called.
+     *
+     * <p>Policy-matching logic:
+     * <ol>
+     *   <li>Load all CancellationPolicy tiers for the tenant, sorted descending by
+     *       {@code hoursBeforeSlot} (widest window first).</li>
+     *   <li>Walk the list and pick the first tier whose {@code hoursBeforeSlot}
+     *       is &le; hours remaining until the booking's start time.</li>
+     *   <li>If no tier matches (slot is in the past or no policy exists), the
+     *       refund percentage defaults to 0.</li>
+     * </ol>
+     * </p>
+     *
+     * @param paymentId UUID of the Payment record to evaluate
+     * @return refund eligibility details including exact refundable amount
+     */
+    @Transactional(readOnly = true)
+    public RefundEligibilityResponse getRefundEligibleAmount(UUID paymentId) {
+        // Load payment + booking in a single join-fetch query
+        Payment payment = paymentRepository.findByIdWithBooking(paymentId)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "Payment not found: " + paymentId));
+
+        var booking = payment.getBooking();
+        BigDecimal amountPaid = payment.getAmount();
+
+        // Hours until the slot (negative means the slot is already in the past)
+        long hoursUntilSlot = java.time.Duration
+                .between(OffsetDateTime.now(), booking.getStartTime())
+                .toHours();
+
+        // Load the tenant's cancellation policy tiers (descending by hoursBeforeSlot)
+        List<CancellationPolicy> tiers =
+                cancellationPolicyRepository.findByTenantIdOrderByHoursBeforeSlotDesc(
+                        booking.getTenantId());
+
+        // Pick the first tier the current time-window satisfies
+        CancellationPolicy matched = tiers.stream()
+                .filter(t -> hoursUntilSlot >= t.getHoursBeforeSlot())
+                .findFirst()
+                .orElse(null);
+
+        int refundPct = (matched != null) ? matched.getRefundPercentage() : 0;
+
+        BigDecimal refundable = amountPaid
+                .multiply(BigDecimal.valueOf(refundPct))
+                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+
+        String description = (matched != null)
+                ? refundPct + "% refund — policy applies " + matched.getHoursBeforeSlot() + "+ hours before slot"
+                : "0% refund — no matching cancellation policy tier (slot may have already passed)";
+
+        return new RefundEligibilityResponse(
+                paymentId,
+                booking.getId(),
+                amountPaid,
+                refundPct,
+                refundable,
+                description);
     }
 
     // -------------------------------------------------------------------------

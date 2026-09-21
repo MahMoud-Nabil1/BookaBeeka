@@ -26,6 +26,15 @@ import java.math.BigDecimal;
  * entries have no booking and therefore no tenant context, which is correct:
  * the customer is simply adding funds to their global wallet.
  *
+ * The {@code payment} FK is nullable:
+ * <ul>
+ *   <li>DEPOSIT entries have no originating Payment (null by design).</li>
+ *   <li>PAYMENT and REFUND entries link to the exact Payment record that
+ *       caused the deduction / reversal, closing the audit trail gap.
+ *       Without this link you could only say "this deduction belongs to
+ *       booking X" but not "it was caused by payment record Y".</li>
+ * </ul>
+ *
  * No {@code @Version} needed — ledger entries are append-only (never updated).
  */
 @Getter
@@ -44,6 +53,14 @@ public class WalletTransaction extends BaseEntity {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "booking_id")
     private Booking booking;
+
+    /**
+     * The Payment record that triggered this ledger entry.
+     * Null for DEPOSIT entries (no payment involved); always set for PAYMENT and REFUND.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "payment_id")
+    private Payment payment;
 
     @Column(name = "amount", nullable = false, precision = 12, scale = 2)
     private BigDecimal amount;

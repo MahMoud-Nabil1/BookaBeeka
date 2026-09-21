@@ -93,4 +93,29 @@ public interface PaymentModuleApi {
      * @param tenantId UUID of the tenant
      */
     TenantBalanceResponse getTenantBalance(UUID tenantId);
+
+    /**
+     * Lightweight summary of a booking's payment state for the admin dashboard.
+     *
+     * <p>Returns cleanly even when no Payment record exists yet (status = "UNPAID")
+     * so the dashboard never needs to handle a 404 for unpaid bookings.</p>
+     *
+     * @param bookingId UUID of the booking to summarise
+     * @return {@code {paymentId, bookingId, amountPaid, totalDue, status}}
+     */
+    PaymentSummaryResponse getPaymentSummaryForBooking(UUID bookingId);
+
+    /**
+     * Computes how much of a payment would be refunded under the tenant's
+     * current cancellation policy.
+     *
+     * <p>Call this before showing a "Trigger Refund" button on the dashboard so
+     * the admin sees the exact amount that will be credited back to the customer.
+     * The calculation is time-sensitive: the applicable tier is determined by how
+     * many hours remain until the booking's start time at the moment of the call.</p>
+     *
+     * @param paymentId UUID of the Payment record to evaluate
+     * @return {@code {paymentId, bookingId, amountPaid, refundPercentage, refundableAmount, policyDescription}}
+     */
+    RefundEligibilityResponse getRefundEligibleAmount(UUID paymentId);
 }

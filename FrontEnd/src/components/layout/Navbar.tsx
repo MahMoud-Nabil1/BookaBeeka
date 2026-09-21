@@ -1,5 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom';
-import { LogOut, User, Menu, Wallet } from 'lucide-react';
+import { LogOut, User, Menu, Wallet, UserCircle } from 'lucide-react';
 import { useAppDispatch, useAppSelector } from '../../redux/hooks';
 import { selectIsAuthenticated, selectUserType, selectRole } from '../../redux/selectors/authSelectors';
 import { logout } from '../../redux/slices/authSlice';
@@ -91,9 +91,15 @@ export default function Navbar({ onMenuClick, showMenuBtn = false }: NavbarProps
                 </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link to={userType === 'STAFF' ? '/staff' : '/portal'} className="cursor-pointer">
+                  <Link to="/portal/profile" className="cursor-pointer">
+                    <UserCircle className="mr-2 h-4 w-4" />
+                    <span>Profile</span>
+                  </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                  <Link to={userType === 'STAFF' ? '/staff' : '/portal/rooms'} className="cursor-pointer">
                     <User className="mr-2 h-4 w-4" />
-                    <span>Dashboard</span>
+                    <span>{userType === 'STAFF' ? 'Dashboard' : 'Browse Rooms'}</span>
                   </Link>
                 </DropdownMenuItem>
                 

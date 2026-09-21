@@ -2,6 +2,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { paymentApi } from '../api/paymentApi';
 import type { TopUpRequest } from '../../../types/payment';
 
+/**
+ * Convenience hook used by CustomerWalletPage.
+ * Bundles balance query, paginated history query, and top-up mutation.
+ */
 export function useWallet(customerId: string | undefined) {
   const queryClient = useQueryClient();
 
@@ -11,11 +15,13 @@ export function useWallet(customerId: string | undefined) {
     enabled: !!customerId,
   });
 
-  const getHistoryQuery = (page: number, size: number) => useQuery({
-    queryKey: ['wallet', 'history', customerId, page, size],
-    queryFn: () => paymentApi.getHistory(customerId!, page, size),
-    enabled: !!customerId,
-  });
+  const getHistoryQuery = (page: number, size: number) =>
+    // eslint-disable-next-line react-hooks/rules-of-hooks
+    useQuery({
+      queryKey: ['wallet', 'history', customerId, page, size],
+      queryFn: () => paymentApi.getHistory(customerId!, page, size),
+      enabled: !!customerId,
+    });
 
   const topUpMutation = useMutation({
     mutationFn: (req: TopUpRequest) => paymentApi.topUpWallet(req),
@@ -25,9 +31,5 @@ export function useWallet(customerId: string | undefined) {
     },
   });
 
-  return {
-    balanceQuery,
-    getHistoryQuery,
-    topUpMutation
-  };
+  return { balanceQuery, getHistoryQuery, topUpMutation };
 }

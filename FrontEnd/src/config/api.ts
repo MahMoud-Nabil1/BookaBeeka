@@ -4,7 +4,8 @@ import { logout } from '../redux/slices/authSlice';
 
 // Create base instance
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080',
+  // Backend runs on 8081; all paths below already include /api/...
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081',
 });
 
 // Request interceptor: add JWT token

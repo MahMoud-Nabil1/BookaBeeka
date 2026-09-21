@@ -1,6 +1,13 @@
-// TODO: useCheckout hook
-// useMutation: POST /api/payments/wallet/checkout
-// Called from useCreateBooking as step 2 of booking flow
-// On success → triggers confirmBooking step
+import { useMutation } from '@tanstack/react-query';
+import { paymentApi } from '../api/paymentApi';
+import type { PaymentRequest } from '../../../types/payment';
 
-export {};
+/**
+ * Step 2 of the booking flow: deduct the booking amount from the customer wallet.
+ * Called after createBooking() succeeds and before confirmBooking().
+ */
+export function useCheckout() {
+  return useMutation({
+    mutationFn: (req: PaymentRequest) => paymentApi.checkout(req),
+  });
+}

@@ -116,7 +116,7 @@ export default function CustomerRegisterPage() {
               />
               {error && (
                 <div className="text-sm font-medium text-destructive">
-                  Registration failed. Please try again.
+                  {(error as any)?.response?.data?.message ?? 'Registration failed. Please try again.'}
                 </div>
               )}
               <Button type="submit" className="w-full" disabled={isPending}>

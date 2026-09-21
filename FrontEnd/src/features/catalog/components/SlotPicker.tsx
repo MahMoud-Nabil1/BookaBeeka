@@ -10,21 +10,19 @@ import type { SlotDto } from '../../../types/availability';
 
 interface SlotPickerProps {
   tenantId: string;
-  branchId: string;
   resourceId: string;
   onSlotSelect: (slot: SlotDto) => void;
   selectedSlot: SlotDto | null;
 }
 
-export default function SlotPicker({ tenantId, branchId, resourceId, onSlotSelect, selectedSlot }: SlotPickerProps) {
+export default function SlotPicker({ tenantId, resourceId, onSlotSelect, selectedSlot }: SlotPickerProps) {
   const [date, setDate] = useState<Date>(new Date());
-  
+
   // Convert JS Date to YYYY-MM-DD for the API
   const dateStr = format(date, 'yyyy-MM-dd');
 
   const { data: slots, isLoading, isError } = useAvailability({
     tenantId,
-    branchId,
     resourceId,
     date: dateStr,
   });
@@ -32,7 +30,7 @@ export default function SlotPicker({ tenantId, branchId, resourceId, onSlotSelec
   return (
     <div className="space-y-6">
       <div className="space-y-2">
-        <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+        <label className="text-sm font-medium leading-none">
           Select Date
         </label>
         <Popover>
@@ -40,7 +38,7 @@ export default function SlotPicker({ tenantId, branchId, resourceId, onSlotSelec
             <Button
               variant="outline"
               className={cn(
-                'w-full justify-start text-left font-normal border-border bg-surface hover:bg-surface-container',
+                'w-full justify-start text-left font-normal border-border',
                 !date && 'text-muted-foreground'
               )}
             >
@@ -54,7 +52,7 @@ export default function SlotPicker({ tenantId, branchId, resourceId, onSlotSelec
               selected={date}
               onSelect={(d) => d && setDate(d)}
               autoFocus
-              disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))} // disable past dates
+              disabled={(d) => d < new Date(new Date().setHours(0, 0, 0, 0))}
             />
           </PopoverContent>
         </Popover>
@@ -64,7 +62,7 @@ export default function SlotPicker({ tenantId, branchId, resourceId, onSlotSelec
         <label className="text-sm font-medium leading-none">
           Available Time Slots
         </label>
-        
+
         {isLoading ? (
           <div className="flex justify-center items-center py-8 text-muted-foreground">
             <Loader2 className="h-6 w-6 animate-spin" />
@@ -75,22 +73,22 @@ export default function SlotPicker({ tenantId, branchId, resourceId, onSlotSelec
             Failed to load availability. Please try again.
           </div>
         ) : !slots || slots.length === 0 ? (
-          <div className="p-8 text-center border border-dashed border-border rounded-lg text-muted-foreground bg-surface/50">
+          <div className="p-8 text-center border border-dashed border-border rounded-lg text-muted-foreground bg-muted/20">
             No available slots for this date.
           </div>
         ) : (
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 max-h-[300px] overflow-y-auto p-1">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-[300px] overflow-y-auto p-1">
             {slots.map((slot, i) => {
-              // Parse ISO string to display time
               const startTime = new Date(slot.start);
               const isSelected = selectedSlot?.start === slot.start;
-              
+
               return (
                 <Button
                   key={i}
                   variant={isSelected ? 'default' : 'outline'}
+                  size="sm"
                   className={cn(
-                    'w-full transition-all duration-200',
+                    'w-full transition-all duration-150',
                     isSelected && 'shadow-low scale-[1.02]'
                   )}
                   onClick={() => onSlotSelect(slot)}

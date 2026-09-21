@@ -1,6 +1,8 @@
-﻿package com.system.booking;
+package com.system.booking;
+
 import org.junit.jupiter.api.Test;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+
 public class BCryptHashGeneratorTest {
     @Test
     void printHash() {

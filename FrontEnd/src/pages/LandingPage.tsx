@@ -1,60 +1,60 @@
 import { Link } from 'react-router-dom';
-import { ArrowRight, CalendarCheck, Clock, Shield, Sparkles } from 'lucide-react';
+import { ArrowRight, CalendarCheck, BedDouble, Shield, Hotel } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import Navbar from '../components/layout/Navbar';
 
-const FEATURED_SERVICES = [
+const FEATURED_ROOMS = [
   {
-    name: 'Executive Boardroom',
-    type: 'Meeting Room',
-    duration: '60 min',
-    price: 50,
-    image: 'https://images.unsplash.com/photo-1497366216548-37526070297c?auto=format&fit=crop&w=600&q=80',
-    description: 'Fully equipped boardroom for up to 12 people with AV setup.',
+    name: 'Deluxe King Room',
+    type: 'King Room',
+    duration: 'night',
+    price: 180,
+    image: 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?auto=format&fit=crop&w=600&q=80',
+    description: 'Spacious king room with city views, king-size bed, and premium amenities.',
   },
   {
-    name: 'Private Studio',
-    type: 'Workspace',
-    duration: '60 min',
-    price: 15,
-    image: 'https://images.unsplash.com/photo-1527192491265-7e15c55b1ed2?auto=format&fit=crop&w=600&q=80',
-    description: 'Quiet, focused workspace with ergonomic seating and natural light.',
+    name: 'Superior Twin Room',
+    type: 'Twin Room',
+    duration: 'night',
+    price: 140,
+    image: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=600&q=80',
+    description: 'Comfortable twin room ideal for colleagues or friends, with all essentials.',
   },
   {
-    name: 'Massage Therapy',
-    type: 'Wellness',
-    duration: '45 min',
-    price: 80,
-    image: 'https://images.unsplash.com/photo-1544161515-4ab6ce6db874?auto=format&fit=crop&w=600&q=80',
-    description: 'Professional massage therapy session in a calming environment.',
+    name: 'Executive Suite',
+    type: 'Suite',
+    duration: 'night',
+    price: 320,
+    image: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=600&q=80',
+    description: 'Luxury suite with separate living area, panoramic views, and butler service.',
   },
   {
-    name: 'Photography Studio',
-    type: 'Creative',
-    duration: '120 min',
-    price: 120,
-    image: 'https://images.unsplash.com/photo-1554048612-b6a482bc67e5?auto=format&fit=crop&w=600&q=80',
-    description: 'Fully lit photography studio with backdrops and professional gear.',
+    name: 'Family Room',
+    type: 'Family Room',
+    duration: 'night',
+    price: 220,
+    image: 'https://images.unsplash.com/photo-1586023492125-27b2c045efd7?auto=format&fit=crop&w=600&q=80',
+    description: 'Generous family room sleeping up to four, with bunk beds and play area.',
   },
 ];
 
 const STEPS = [
   {
-    icon: Sparkles,
-    title: 'Browse Services',
-    description: 'Explore our curated catalog of bookable services and spaces.',
+    icon: Hotel,
+    title: 'Browse Rooms',
+    description: 'Explore our curated selection of hotel rooms and accommodations.',
   },
   {
     icon: CalendarCheck,
-    title: 'Pick a Time',
-    description: 'Choose an available slot that fits your schedule perfectly.',
+    title: 'Pick Your Dates',
+    description: 'Choose your check-in and check-out dates that fit your schedule.',
   },
   {
     icon: Shield,
     title: 'Book Instantly',
-    description: 'Secure your spot with a confirmed reservation in seconds.',
+    description: 'Secure your room with a confirmed reservation in seconds.',
   },
 ];
 
@@ -74,18 +74,18 @@ export default function LandingPage() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-20 pb-24 sm:pt-28 sm:pb-32">
           <div className="max-w-3xl">
             <Badge variant="secondary" className="mb-6 px-4 py-1.5 text-sm font-medium shadow-low">
-              <Clock className="mr-1.5 h-3.5 w-3.5" />
-              Book in under 30 seconds
+              <BedDouble className="mr-1.5 h-3.5 w-3.5" />
+              Book your perfect stay
             </Badge>
 
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-foreground leading-[1.1] mb-6">
-              Reserve the perfect
-              <span className="text-primary"> space & service</span>
+              Find your ideal
+              <span className="text-primary"> hotel room</span>
             </h1>
 
             <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl mb-10 leading-relaxed">
-              BookaBeeka makes it effortless to discover, schedule, and manage bookings
-              for workspaces, wellness sessions, creative studios, and more.
+              BookaBeeka makes it effortless to discover, book, and manage your hotel reservations.
+              From budget rooms to luxury suites — find the perfect accommodation for your stay.
             </p>
 
             <div className="flex flex-col sm:flex-row items-start gap-4">
@@ -105,41 +105,41 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── Featured Services ─────────────────────────────────── */}
+      {/* ── Featured Rooms ────────────────────────────────────── */}
       <section className="bg-muted/40 border-y border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-24">
           <div className="text-center mb-14">
             <h2 className="text-3xl sm:text-4xl font-bold tracking-tight text-foreground mb-4">
-              Services you can book
+              Featured accommodations
             </h2>
             <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-              From professional workspaces to wellness treatments — find what you need and reserve it instantly.
+              From cozy standard rooms to spacious suites — discover the perfect place for your stay.
             </p>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {FEATURED_SERVICES.map((service) => (
+            {FEATURED_ROOMS.map((room) => (
               <Card
-                key={service.name}
+                key={room.name}
                 className="group overflow-hidden border-border bg-card hover:shadow-raised transition-shadow duration-300"
               >
                 <div className="aspect-[4/3] w-full overflow-hidden relative">
                   <img
-                    src={service.image}
-                    alt={service.name}
+                    src={room.image}
+                    alt={room.name}
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
                   />
                   <Badge className="absolute top-3 left-3 bg-background/90 text-foreground hover:bg-background shadow-low text-xs">
-                    {service.type}
+                    {room.type}
                   </Badge>
                 </div>
                 <CardContent className="p-5">
-                  <h3 className="font-semibold text-lg mb-1 text-foreground">{service.name}</h3>
-                  <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{service.description}</p>
+                  <h3 className="font-semibold text-lg mb-1 text-foreground">{room.name}</h3>
+                  <p className="text-sm text-muted-foreground mb-4 line-clamp-2">{room.description}</p>
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="text-xl font-bold text-primary">${service.price}</span>
-                      <span className="text-sm text-muted-foreground ml-1">/ {service.duration}</span>
+                      <span className="text-xl font-bold text-primary">${room.price}</span>
+                      <span className="text-sm text-muted-foreground ml-1">/ {room.duration}</span>
                     </div>
                     <Button size="sm" variant="ghost" className="text-primary hover:text-primary" asChild>
                       <Link to="/login/customer">
@@ -161,7 +161,7 @@ export default function LandingPage() {
             How it works
           </h2>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
-            Three simple steps to your next booking.
+            Three simple steps to your next hotel booking.
           </p>
         </div>
 
@@ -183,15 +183,15 @@ export default function LandingPage() {
       <section className="border-t border-border bg-foreground text-background">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 sm:py-20 flex flex-col sm:flex-row items-center justify-between gap-8">
           <div>
-            <h2 className="text-2xl sm:text-3xl font-bold mb-2">Ready to get started?</h2>
-            <p className="text-background/70 text-lg">Create your account and make your first booking today.</p>
+            <h2 className="text-2xl sm:text-3xl font-bold mb-2">Ready to book your stay?</h2>
+            <p className="text-background/70 text-lg">Create your account and reserve your room today.</p>
           </div>
           <div className="flex gap-4 shrink-0">
             <Button size="lg" className="h-12 px-8 shadow-raised" asChild>
               <Link to="/register">Sign Up Free</Link>
             </Button>
             <Button size="lg" variant="outline" className="h-12 px-8 border-background/20 text-background hover:bg-background/10 hover:text-background" asChild>
-              <Link to="/login/staff">Staff Portal</Link>
+              <Link to="/login/staff">Hotel Staff Portal</Link>
             </Button>
           </div>
         </div>

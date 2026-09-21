@@ -1,6 +1,5 @@
-// TODO: ADMIN payments page
-// TenantBalanceCard + paginated tenant payment history table
+import StaffPaymentsPage from '../../../billing/pages/StaffPaymentsPage';
 
 export default function AdminPaymentsPage() {
-  return null // TODO
+  return <StaffPaymentsPage title="Payments" />;
 }

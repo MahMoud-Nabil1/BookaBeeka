@@ -1,5 +1,5 @@
 // TODO: booking card component
-// Displays: resource, time slot, BookingStatusBadge, confirm/cancel action buttons
+// Displays: room info, check-in/out dates, BookingStatusBadge, confirm/cancel action buttons
 
 export default function BookingCard() {
   return null // TODO

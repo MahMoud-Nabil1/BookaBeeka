@@ -10,6 +10,9 @@ import com.system.booking.modules.booking.internal.exception.SlotUnavailableExce
 import com.system.booking.modules.booking.internal.repository.BookingRepository;
 import com.system.booking.modules.inventory.api.InventoryModuleApi;
 import com.system.booking.modules.inventory.internal.dto.response.ServiceOfferingResponse;
+import com.system.booking.modules.customer.internal.repository.CustomerRepository;
+import com.system.booking.modules.notification.api.event.NotificationEvent;
+import com.system.booking.modules.notification.api.model.NotificationType;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
@@ -31,6 +34,7 @@ public class BookingCreationService {
     private final InventoryModuleApi inventoryApi;
     private final IdempotencyService idempotencyService;
     private final ApplicationEventPublisher eventPublisher;
+    private final CustomerRepository customerRepo;
 
     @Transactional
     public BookingConfirmationDto createBooking(CreateBookingRequestDto request, UUID customerId, String idempotencyKey) {
@@ -96,27 +100,48 @@ public class BookingCreationService {
                 .totalAmount(basePrice.multiply(java.math.BigDecimal.valueOf(rooms)))
                 .currency("USD")
                 .build();
-        booking = bookingRepo.save(booking);
+        final Booking savedBooking = bookingRepo.save(booking);
 
-        OffsetDateTime createdAtOdt = booking.getCreatedAt() != null
-                ? booking.getCreatedAt().atOffset(ZoneOffset.UTC)
+        OffsetDateTime createdAtOdt = savedBooking.getCreatedAt() != null
+                ? savedBooking.getCreatedAt().atOffset(ZoneOffset.UTC)
                 : OffsetDateTime.now();
 
         // step 5: save idempotency response
         Map<String, Object> responseBody = Map.of(
-                "bookingId", booking.getId().toString(),
-                "status",    booking.getStatus().name(),
+                "bookingId", savedBooking.getId().toString(),
+                "status",    savedBooking.getStatus().name(),
                 "createdAt", createdAtOdt.toString()
         );
         idempotencyService.complete(request.tenantId(), idempotencyKey, 201, responseBody);
 
         // step 6: fire event (runs after commit)
         eventPublisher.publishEvent(new BookingCreatedEvent(
-                booking.getId(), booking.getTenantId(), booking.getCustomerId(),
-                booking.getRoomId(), booking.getTotalAmount(), createdAtOdt));
+                savedBooking.getId(), savedBooking.getTenantId(), savedBooking.getCustomerId(),
+                savedBooking.getRoomId(), savedBooking.getTotalAmount(), createdAtOdt));
+
+        // step 7: dispatch notification event
+        customerRepo.findById(customerId).ifPresent(customer -> {
+            eventPublisher.publishEvent(NotificationEvent.of(
+                    savedBooking.getTenantId(),
+                    savedBooking.getCustomerId(),
+                    savedBooking.getId(),
+                    NotificationType.BOOKING_CONFIRMED,
+                    "Reservation Created - Hotel Booking #" + savedBooking.getId().toString().substring(0, 8),
+                    customer.getEmail(),
+                    "Your booking has been reserved successfully.",
+                    Map.of(
+                            "bookingId", savedBooking.getId().toString(),
+                            "customerName", customer.getFirstName() + " " + customer.getLastName(),
+                            "checkIn", savedBooking.getCheckIn() != null ? savedBooking.getCheckIn().toString() : "",
+                            "checkOut", savedBooking.getCheckOut() != null ? savedBooking.getCheckOut().toString() : "",
+                            "totalAmount", savedBooking.getTotalAmount() != null ? savedBooking.getTotalAmount().toString() : "0.00",
+                            "currency", savedBooking.getCurrency()
+                    )
+            ));
+        });
 
         return new BookingConfirmationDto(
-                booking.getId(), booking.getStatus().name(),
+                savedBooking.getId(), savedBooking.getStatus().name(),
                 null, createdAtOdt);
     }
 }

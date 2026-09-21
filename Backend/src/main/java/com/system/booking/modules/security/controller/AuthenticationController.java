@@ -1,6 +1,8 @@
 package com.system.booking.modules.security.controller;
 
 import com.system.booking.modules.security.dto.request.LoginRequest;
+import com.system.booking.modules.security.dto.request.OtpRequest;
+import com.system.booking.modules.security.dto.request.PasswordResetRequest;
 import com.system.booking.modules.security.dto.response.LoginResponse;
 import com.system.booking.modules.security.service.AuthenticationService;
 import jakarta.validation.Valid;
@@ -10,6 +12,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
 
 /**
  * Authentication Controller — Role-Segregated Login Endpoints.
@@ -91,5 +95,31 @@ public class AuthenticationController {
     @PostMapping("/customer/login")
     public ResponseEntity<LoginResponse> customerLogin(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authenticationService.loginCustomer(request));
+    }
+
+    /**
+     * Requests an OTP verification code dispatched via email.
+     *
+     * <p>Always returns 200 OK to prevent user enumeration attacks.</p>
+     */
+    @PostMapping("/otp/request")
+    public ResponseEntity<Map<String, String>> requestOtp(@Valid @RequestBody OtpRequest request) {
+        authenticationService.requestOtp(request);
+        return ResponseEntity.ok(Map.of(
+                "message", "If an account exists for this email, a verification code has been dispatched."
+        ));
+    }
+
+    /**
+     * Requests a password reset link dispatched via email.
+     *
+     * <p>Always returns 200 OK to prevent user enumeration attacks.</p>
+     */
+    @PostMapping("/password-reset/request")
+    public ResponseEntity<Map<String, String>> requestPasswordReset(@Valid @RequestBody PasswordResetRequest request) {
+        authenticationService.requestPasswordReset(request);
+        return ResponseEntity.ok(Map.of(
+                "message", "If an account exists for this email, a password reset link has been dispatched."
+        ));
     }
 }

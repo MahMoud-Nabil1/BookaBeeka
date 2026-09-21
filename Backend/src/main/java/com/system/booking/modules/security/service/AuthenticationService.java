@@ -1,16 +1,21 @@
 package com.system.booking.modules.security.service;
 
+import com.system.booking.modules.notification.api.event.NotificationEvent;
+import com.system.booking.modules.notification.api.model.NotificationType;
+import com.system.booking.modules.security.context.TenantContext;
+import com.system.booking.modules.security.context.TenantContextHolder;
 import com.system.booking.modules.security.dto.AuthUserDTO;
 import com.system.booking.modules.security.dto.request.LoginRequest;
+import com.system.booking.modules.security.dto.request.OtpRequest;
+import com.system.booking.modules.security.dto.request.OtpVerificationRequest;
+import com.system.booking.modules.security.dto.request.PasswordResetRequest;
+import com.system.booking.modules.security.dto.request.ResetPasswordRequest;
 import com.system.booking.modules.security.dto.response.LoginResponse;
+import com.system.booking.modules.security.dto.response.OtpVerificationResponse;
 import com.system.booking.modules.security.port.in.CustomerAuthPort;
 import com.system.booking.modules.security.port.in.HotelAdminAuthPort;
 import com.system.booking.modules.security.port.in.OwnerAuthPort;
 import com.system.booking.modules.security.port.in.SuperAdminAuthPort;
-import com.system.booking.modules.notification.api.event.NotificationEvent;
-import com.system.booking.modules.notification.api.model.NotificationType;
-import com.system.booking.modules.security.dto.request.OtpRequest;
-import com.system.booking.modules.security.dto.request.PasswordResetRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -37,6 +42,7 @@ public class AuthenticationService {
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final ApplicationEventPublisher eventPublisher;
+    private final SecurityTokenStore tokenStore;
 
     public LoginResponse loginSuperAdmin(LoginRequest request) {
         var user = superAdminPort.findSuperAdminByEmail(request.email())
@@ -63,7 +69,8 @@ public class AuthenticationService {
     }
 
     /**
-     * Generates a 6-digit OTP code and dispatches a NotificationEvent.
+     * Generates a 6-digit OTP code, saves it to cache with an expiration time,
+     * and dispatches a NotificationEvent of type OTP_REQUESTED.
      *
      * @param request The OTP request payload containing recipient email and optional tenantId.
      */
@@ -73,6 +80,9 @@ public class AuthenticationService {
             UUID tenantId = (request.tenantId() != null)
                     ? request.tenantId()
                     : (user.tenantId() != null ? user.tenantId() : PLATFORM_FALLBACK_TENANT_ID);
+
+            UUID effectiveTenant = (user.tenantId() != null) ? user.tenantId() : request.tenantId();
+            tokenStore.storeOtp(user.email(), effectiveTenant, user.id(), otpCode);
 
             log.info("Publishing OTP NotificationEvent for user [{}] under tenant [{}]", user.email(), tenantId);
 
@@ -96,7 +106,31 @@ public class AuthenticationService {
     }
 
     /**
-     * Generates a secure password reset token and dispatches a NotificationEvent.
+     * Verifies a submitted OTP code against the cached token store.
+     * Enforces attempt thresholds, timing-attack-safe comparison, and strict tenant isolation.
+     *
+     * @param request The OTP verification payload.
+     * @return Verification response.
+     */
+    public OtpVerificationResponse verifyOtp(OtpVerificationRequest request) {
+        var entry = tokenStore.verifyAndConsumeOtp(request.email(), request.tenantId(), request.otpCode());
+
+        // Establish tenant context if the user is tenant-scoped
+        if (entry.tenantId() != null && !PLATFORM_FALLBACK_TENANT_ID.equals(entry.tenantId())) {
+            TenantContextHolder.setContext(new TenantContext(entry.tenantId()));
+        }
+
+        try {
+            log.info("Successfully verified OTP for user [{}] under tenant [{}]", request.email(), entry.tenantId());
+            return OtpVerificationResponse.success("OTP verified successfully");
+        } finally {
+            TenantContextHolder.clear();
+        }
+    }
+
+    /**
+     * Generates a secure password reset token, saves it to cache with an expiration time,
+     * and dispatches a NotificationEvent of type PASSWORD_RESET.
      *
      * @param request The password reset request payload.
      */
@@ -106,6 +140,9 @@ public class AuthenticationService {
             UUID tenantId = (request.tenantId() != null)
                     ? request.tenantId()
                     : (user.tenantId() != null ? user.tenantId() : PLATFORM_FALLBACK_TENANT_ID);
+
+            UUID effectiveTenant = (user.tenantId() != null) ? user.tenantId() : request.tenantId();
+            tokenStore.storePasswordResetToken(resetToken, user.id(), user.role(), user.email(), effectiveTenant);
 
             log.info("Publishing Password Reset NotificationEvent for user [{}] under tenant [{}]", user.email(), tenantId);
 
@@ -129,6 +166,37 @@ public class AuthenticationService {
         }, () -> log.warn("Password reset requested for non-existent email [{}]. Silently ignored per OWASP.", request.email()));
     }
 
+    /**
+     * Validates the password reset token, encodes the new password using BCryptPasswordEncoder,
+     * and updates the user's credentials in the database scoped by role and tenant.
+     *
+     * @param request The reset password payload containing the token and new password.
+     */
+    public void resetPassword(ResetPasswordRequest request) {
+        var entry = tokenStore.consumePasswordResetToken(request.token());
+
+        // Establish tenant context if the user belongs to a tenant
+        if (entry.tenantId() != null && !PLATFORM_FALLBACK_TENANT_ID.equals(entry.tenantId())) {
+            TenantContextHolder.setContext(new TenantContext(entry.tenantId()));
+        }
+
+        try {
+            String encodedPassword = passwordEncoder.encode(request.newPassword());
+
+            switch (entry.role()) {
+                case "CUSTOMER" -> customerPort.updatePassword(entry.userId(), encodedPassword);
+                case "ADMIN" -> hotelAdminPort.updatePassword(entry.userId(), encodedPassword);
+                case "OWNER" -> ownerPort.updatePassword(entry.userId(), encodedPassword);
+                case "SUPER_ADMIN" -> superAdminPort.updatePassword(entry.userId(), encodedPassword);
+                default -> throw new IllegalStateException("Unsupported user role: " + entry.role());
+            }
+
+            log.info("Successfully reset password for user [{}] with role [{}]", entry.email(), entry.role());
+        } finally {
+            TenantContextHolder.clear();
+        }
+    }
+
     private Optional<AuthUserDTO> findUserByEmail(String email) {
         return customerPort.findCustomerByEmail(email)
                 .or(() -> hotelAdminPort.findAdminByEmail(email))
@@ -147,4 +215,4 @@ public class AuthenticationService {
         String token = jwtService.generateToken(user);
         return new LoginResponse(token, user.role());
     }
-}
+}

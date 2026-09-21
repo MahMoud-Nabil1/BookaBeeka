@@ -37,8 +37,8 @@ public class TenantService implements TenantModuleApi {
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new EntityNotFoundException("Tenant not found: " + tenantId));
 
-        if (request.name() != null) {
-            tenant.setName(request.name());
+        if (request.hotelName() != null) {
+            tenant.setName(request.hotelName());
         }
         if (request.settings() != null) {
             tenant.setSettings(request.settings());

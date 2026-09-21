@@ -48,7 +48,8 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/super/**").hasRole("SUPER_ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/tenants/register").hasRole("SUPER_ADMIN")
 
-                        // Hotel Owner endpoints
+                        // Hotel Owner endpoints — register is public, all others require OWNER
+                        .requestMatchers(HttpMethod.POST, "/api/v1/owner/register").permitAll()
                         .requestMatchers("/api/v1/owner/**").hasRole("OWNER")
                         .requestMatchers(HttpMethod.GET, "/api/tenants/me").hasRole("OWNER")
                         .requestMatchers(HttpMethod.PUT, "/api/tenants/me").hasRole("OWNER")

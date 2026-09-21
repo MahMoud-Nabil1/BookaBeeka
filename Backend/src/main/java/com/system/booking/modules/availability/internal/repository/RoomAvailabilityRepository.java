@@ -74,33 +74,32 @@ public class RoomAvailabilityRepository {
         StringBuilder sql = new StringBuilder();
         sql.append("""
             SELECT
-                r.id AS room_id,
-                r.name AS room_name,
+                r.id          AS room_id,
+                r.name        AS room_name,
                 r.resource_type,
                 r.capacity,
                 r.specs,
                 r.price_per_night,
                 r.currency,
-                t.id AS hotel_id,
-                t.name AS hotel_name,
+                t.id          AS hotel_id,
+                t.name        AS hotel_name,
                 t.subdomain
             FROM resource r
             JOIN tenant t ON r.tenant_id = t.id
             WHERE r.is_bookable = true
-              AND r.is_active = true
-              AND t.status = 'ACTIVE'
-              AND (:hotelId IS NULL OR r.tenant_id = CAST(:hotelId AS uuid))
-              AND (:roomType IS NULL OR r.resource_type = :roomType)
-              AND (:minCapacity IS NULL OR r.capacity >= :minCapacity)
-              AND (:bedType IS NULL OR r.specs->>'bedType' = :bedType)
-              AND (:minPrice IS NULL OR r.price_per_night >= CAST(:minPrice AS numeric))
-              AND (:maxPrice IS NULL OR r.price_per_night <= CAST(:maxPrice AS numeric))
+              AND r.is_active   = true
+              AND t.status      = 'ACTIVE'
+              AND (CAST(:hotelId     AS uuid)    IS NULL OR r.tenant_id         = CAST(:hotelId     AS uuid))
+              AND (CAST(:roomType    AS text)    IS NULL OR r.resource_type     = CAST(:roomType    AS text))
+              AND (CAST(:minCapacity AS integer) IS NULL OR r.capacity         >= CAST(:minCapacity AS integer))
+              AND (CAST(:bedType     AS text)    IS NULL OR r.specs->>'bedType' = CAST(:bedType     AS text))
+              AND (CAST(:minPrice    AS numeric) IS NULL OR r.price_per_night  >= CAST(:minPrice    AS numeric))
+              AND (CAST(:maxPrice    AS numeric) IS NULL OR r.price_per_night  <= CAST(:maxPrice    AS numeric))
             """);
 
-        // Amenity filter: room must have ALL requested amenities
         if (hasAmenities) {
             sql.append("""
-              AND :amenityCount = (
+              AND CAST(:amenityCount AS integer) = (
                   SELECT COUNT(DISTINCT ra.amenity_id)
                   FROM resource_amenity ra
                   WHERE ra.resource_id = r.id
@@ -109,19 +108,19 @@ public class RoomAvailabilityRepository {
             """);
         }
 
-        // No overlapping active hotel bookings
+        // No overlapping confirmed/pending bookings
         sql.append("""
               AND NOT EXISTS (
                   SELECT 1 FROM booking b
                   WHERE b.resource_id = r.id
                     AND b.status IN ('PENDING_PAYMENT', 'CONFIRMED')
-                    AND b.check_in IS NOT NULL
-                    AND b.check_in < CAST(:checkOut AS date)
-                    AND b.check_out > CAST(:checkIn AS date)
+                    AND b.check_in  IS NOT NULL
+                    AND b.check_in  < CAST(:checkOut AS date)
+                    AND b.check_out > CAST(:checkIn  AS date)
               )
             """);
 
-        // No overlapping active room blocks
+        // No overlapping room blocks
         sql.append("""
               AND NOT EXISTS (
                   SELECT 1 FROM availability_exceptions ae
@@ -129,7 +128,7 @@ public class RoomAvailabilityRepository {
                     AND ae.is_available = false
                     AND ae.start_date IS NOT NULL
                     AND ae.start_date < CAST(:checkOut AS date)
-                    AND ae.end_date > CAST(:checkIn AS date)
+                    AND ae.end_date   > CAST(:checkIn  AS date)
               )
             """);
 
@@ -149,21 +148,21 @@ public class RoomAvailabilityRepository {
             List<UUID> amenityIds,
             int amenityCount) {
 
-        query.setParameter("hotelId", hotelId != null ? hotelId.toString() : null);
-        query.setParameter("checkIn", checkIn);
-        query.setParameter("checkOut", checkOut);
-        query.setParameter("roomType", roomType);
-        query.setParameter("minCapacity", minCapacity);
-        query.setParameter("bedType", bedType);
-        query.setParameter("minPrice", minPrice != null ? minPrice.toString() : null);
-        query.setParameter("maxPrice", maxPrice != null ? maxPrice.toString() : null);
+        // Pass as strings so PostgreSQL CAST(:x AS date/uuid) bindings work correctly
+        query.setParameter("hotelId",      hotelId != null ? hotelId.toString() : null);
+        query.setParameter("checkIn",      checkIn.toString());
+        query.setParameter("checkOut",     checkOut.toString());
+        query.setParameter("roomType",     roomType);
+        query.setParameter("minCapacity",  minCapacity != null ? minCapacity.toString() : null);
+        query.setParameter("bedType",      bedType);
+        query.setParameter("minPrice",     minPrice  != null ? minPrice.toString()  : null);
+        query.setParameter("maxPrice",     maxPrice  != null ? maxPrice.toString()  : null);
 
         if (amenityCount > 0) {
-            // Convert UUIDs to strings for PostgreSQL IN clause
             List<String> amenityIdStrings = amenityIds.stream()
                     .map(UUID::toString)
                     .toList();
-            query.setParameter("amenityIds", amenityIdStrings);
+            query.setParameter("amenityIds",   amenityIdStrings);
             query.setParameter("amenityCount", amenityCount);
         }
     }

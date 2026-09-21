@@ -61,6 +61,15 @@ public class BookingController {
         return ResponseEntity.ok(result);
     }
 
+    // mark a booking as completed — admin/owner triggers this after checkout date
+    // this is required before a customer can leave a review
+    @PostMapping("/{bookingId}/complete")
+    @PreAuthorize("hasAnyRole('OWNER', 'ADMIN')")
+    public ResponseEntity<Map<String, String>> completeBooking(@PathVariable UUID bookingId) {
+        bookingApi.completeBooking(bookingId);
+        return ResponseEntity.ok(Map.of("message", "Booking completed", "bookingId", bookingId.toString()));
+    }
+
     // check booking status
     @GetMapping("/{bookingId}/status")
     @PreAuthorize("hasRole('CUSTOMER')")

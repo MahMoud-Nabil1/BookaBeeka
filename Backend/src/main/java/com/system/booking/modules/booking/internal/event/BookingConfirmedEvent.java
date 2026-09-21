@@ -8,7 +8,7 @@ public record BookingConfirmedEvent(
         UUID bookingId,
         UUID tenantId,
         UUID customerId,
-        UUID resourceId,
+        UUID roomId,       // hotel room that was confirmed
         OffsetDateTime slotStart,
         OffsetDateTime slotEnd
 ) {}

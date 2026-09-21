@@ -41,8 +41,9 @@ public class Booking extends TenantBaseEntity {
     @Column(name = "staff_id")
     private UUID staffId;
 
+    // hotel specialization: resource_id maps to the room being booked
     @Column(name = "resource_id", nullable = false)
-    private UUID resourceId;
+    private UUID roomId;
 
     @Column(name = "service_offering_id")
     private UUID serviceOfferingId;
@@ -79,6 +80,13 @@ public class Booking extends TenantBaseEntity {
 
     @Column(name = "notes", columnDefinition = "text")
     private String notes;
+
+    @Column(name = "special_requests", columnDefinition = "text")
+    private String specialRequests;
+
+    @Column(name = "number_of_rooms")
+    @Builder.Default
+    private Integer numberOfRooms = 1;
 
     @Column(name = "source", length = 50)
     private String source;

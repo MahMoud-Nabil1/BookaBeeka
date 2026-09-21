@@ -11,6 +11,8 @@ import com.system.booking.modules.security.context.TenantContextHolder;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -38,6 +40,8 @@ import java.util.UUID;
 @RequestMapping("/api/availability")
 @RequiredArgsConstructor
 public class AvailabilityController {
+
+    private static final Logger log = LoggerFactory.getLogger(AvailabilityController.class);
 
     private final AvailabilityModuleApi availabilityModuleApi;
     private final ScheduleRuleService scheduleRuleService;
@@ -71,9 +75,14 @@ public class AvailabilityController {
                 minCapacity, minPrice, maxPrice, amenities
         );
 
-        Pageable pageable = PageRequest.of(page, size);
-        Page<AvailableRoomResponse> results = availabilityModuleApi.searchAvailableRooms(request, pageable);
-        return ResponseEntity.ok(results);
+        try {
+            Pageable pageable = PageRequest.of(page, size);
+            Page<AvailableRoomResponse> results = availabilityModuleApi.searchAvailableRooms(request, pageable);
+            return ResponseEntity.ok(results);
+        } catch (Exception e) {
+            log.error("searchAvailableRooms failed: [{}] {}", e.getClass().getSimpleName(), e.getMessage(), e);
+            throw e;
+        }
     }
 
     // ── Room Block CRUD (admin, tenant from JWT) ─────────────────

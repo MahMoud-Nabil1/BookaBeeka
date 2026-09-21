@@ -6,7 +6,10 @@ import com.system.booking.modules.security.port.in.HotelAdminAuthPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import org.springframework.transaction.annotation.Transactional;
+
 import java.util.Optional;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -26,4 +29,13 @@ public class HotelAdminSecurityAdapter implements HotelAdminAuthPort {
                         admin.getIsActive()
                 ));
     }
-}
+
+    @Override
+    @Transactional
+    public void updatePassword(UUID adminId, String newPasswordHash) {
+        hotelAdminRepository.findById(adminId).ifPresent(admin -> {
+            admin.setPasswordHash(newPasswordHash);
+            hotelAdminRepository.save(admin);
+        });
+    }
+}

@@ -1,14 +1,17 @@
 package com.system.booking.modules.customer.api;
 
+import com.system.booking.modules.customer.internal.dto.CustomerProfileResponse;
+import com.system.booking.modules.customer.internal.dto.CustomerProfileUpdateRequest;
 import com.system.booking.modules.customer.internal.dto.CustomerRegisterRequest;
 import com.system.booking.modules.customer.internal.service.CustomerService;
+import com.system.booking.modules.security.util.SecurityUtil;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.UUID;
 
 /**
  * REST controller exposing public Customer operations.
@@ -35,5 +38,37 @@ public class CustomerController {
     public ResponseEntity<String> register(@Valid @RequestBody CustomerRegisterRequest request) {
         customerService.registerCustomer(request);
         return ResponseEntity.ok("Customer registered successfully");
+    }
+
+    /**
+     * Get the authenticated customer's profile.
+     *
+     * <p><b>Access:</b> Authenticated CUSTOMER users only.</p>
+     *
+     * @return the customer profile response
+     */
+    @GetMapping("/profile")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public ResponseEntity<CustomerProfileResponse> getProfile() {
+        UUID customerId = SecurityUtil.getCurrentCustomerPrincipal().id();
+        CustomerProfileResponse profile = customerService.getCustomerProfile(customerId);
+        return ResponseEntity.ok(profile);
+    }
+
+    /**
+     * Update the authenticated customer's profile.
+     *
+     * <p><b>Access:</b> Authenticated CUSTOMER users only.</p>
+     *
+     * @param request the validated profile update request
+     * @return the updated customer profile response
+     */
+    @PutMapping("/profile")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public ResponseEntity<CustomerProfileResponse> updateProfile(
+            @Valid @RequestBody CustomerProfileUpdateRequest request) {
+        UUID customerId = SecurityUtil.getCurrentCustomerPrincipal().id();
+        CustomerProfileResponse updatedProfile = customerService.updateCustomerProfile(customerId, request);
+        return ResponseEntity.ok(updatedProfile);
     }
 }

@@ -4,15 +4,14 @@ import type { SlotDto } from '../../../types/availability';
 
 interface UseAvailabilityArgs {
   tenantId: string;
-  branchId: string;
   resourceId: string;
-  date: string;
+  date: string; // YYYY-MM-DD
 }
 
-export const useAvailability = ({ tenantId, branchId, resourceId, date }: UseAvailabilityArgs) => {
+export const useAvailability = ({ tenantId, resourceId, date }: UseAvailabilityArgs) => {
   return useQuery<SlotDto[]>({
-    queryKey: ['availability', tenantId, branchId, resourceId, date],
-    queryFn: () => availabilityApi.getSlots(tenantId, branchId, resourceId, date),
-    enabled: !!tenantId && !!branchId && !!resourceId && !!date, // Only run when all args are present
+    queryKey: ['availability', 'slots', tenantId, resourceId, date],
+    queryFn: () => availabilityApi.getSlots(tenantId, resourceId, date),
+    enabled: !!tenantId && !!resourceId && !!date,
   });
 };

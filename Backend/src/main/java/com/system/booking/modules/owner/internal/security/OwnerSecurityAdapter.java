@@ -6,7 +6,10 @@ import com.system.booking.modules.security.port.in.OwnerAuthPort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import org.springframework.transaction.annotation.Transactional;
+
 import java.util.Optional;
+import java.util.UUID;
 
 @Component
 @RequiredArgsConstructor
@@ -26,4 +29,13 @@ public class OwnerSecurityAdapter implements OwnerAuthPort {
                         owner.getIsActive()
                 ));
     }
-}
+
+    @Override
+    @Transactional
+    public void updatePassword(UUID ownerId, String newPasswordHash) {
+        ownerRepository.findById(ownerId).ifPresent(owner -> {
+            owner.setPasswordHash(newPasswordHash);
+            ownerRepository.save(owner);
+        });
+    }
+}

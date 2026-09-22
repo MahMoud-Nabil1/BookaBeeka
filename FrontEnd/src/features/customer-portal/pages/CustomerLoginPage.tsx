@@ -26,7 +26,7 @@ export default function CustomerLoginPage() {
 
   const onSubmit = (values: LoginFormValues) => {
     login(values, {
-      onSuccess: () => navigate('/portal/catalog'),
+      onSuccess: () => navigate('/portal'),
     });
   };
 

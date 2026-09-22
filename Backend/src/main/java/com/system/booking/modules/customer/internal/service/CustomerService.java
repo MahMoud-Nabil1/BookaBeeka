@@ -1,5 +1,7 @@
 package com.system.booking.modules.customer.internal.service;
 
+import com.system.booking.modules.customer.internal.dto.CustomerProfileResponse;
+import com.system.booking.modules.customer.internal.dto.CustomerProfileUpdateRequest;
 import com.system.booking.modules.customer.internal.dto.CustomerRegisterRequest;
 import com.system.booking.modules.customer.internal.entity.Customer;
 import com.system.booking.modules.customer.internal.repository.CustomerRepository;
@@ -7,6 +9,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
+import java.util.UUID;
 
 /**
  * Core business service handling Customer operations (e.g., registration, profile updates).
@@ -52,5 +57,67 @@ public class CustomerService {
 
         // Step 4: Persist to the database
         customerRepository.save(customer);
+    }
+
+    /**
+     * Retrieves the profile of a customer by their ID.
+     *
+     * @param customerId the UUID of the customer
+     * @return the customer profile response
+     * @throws IllegalArgumentException if the customer is not found
+     */
+    @Transactional(readOnly = true)
+    public CustomerProfileResponse getCustomerProfile(UUID customerId) {
+        Customer customer = customerRepository.findById(customerId)
+                .orElseThrow(() -> new IllegalArgumentException("Customer not found"));
+
+        return CustomerProfileResponse.builder()
+                .id(customer.getId().toString())
+                .email(customer.getEmail())
+                .firstName(customer.getFirstName())
+                .lastName(customer.getLastName())
+                .phone(customer.getPhone())
+                .createdAt(customer.getCreatedAt() != null ? customer.getCreatedAt() : LocalDateTime.now())
+                .updatedAt(customer.getUpdatedAt() != null ? customer.getUpdatedAt() : LocalDateTime.now())
+                .build();
+    }
+
+    /**
+     * Updates the profile of a customer.
+     *
+     * @param customerId the UUID of the customer
+     * @param request the validated update request
+     * @return the updated customer profile response
+     * @throws IllegalArgumentException if the customer is not found or email is already taken
+     */
+    @Transactional
+    public CustomerProfileResponse updateCustomerProfile(UUID customerId, CustomerProfileUpdateRequest request) {
+        Customer customer = customerRepository.findById(customerId)
+                .orElseThrow(() -> new IllegalArgumentException("Customer not found"));
+
+        // Check if email is being changed and if the new email is already taken
+        if (!customer.getEmail().equals(request.getEmail()) && 
+            customerRepository.existsByEmail(request.getEmail())) {
+            throw new IllegalArgumentException("Email is already registered");
+        }
+
+        // Update customer fields
+        customer.setFirstName(request.getFirstName());
+        customer.setLastName(request.getLastName());
+        customer.setEmail(request.getEmail());
+        customer.setPhone(request.getPhone());
+
+        // Save and return updated profile
+        Customer updatedCustomer = customerRepository.save(customer);
+
+        return CustomerProfileResponse.builder()
+                .id(updatedCustomer.getId().toString())
+                .email(updatedCustomer.getEmail())
+                .firstName(updatedCustomer.getFirstName())
+                .lastName(updatedCustomer.getLastName())
+                .phone(updatedCustomer.getPhone())
+                .createdAt(updatedCustomer.getCreatedAt())
+                .updatedAt(updatedCustomer.getUpdatedAt())
+                .build();
     }
 }

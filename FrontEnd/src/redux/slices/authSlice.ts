@@ -2,6 +2,7 @@ import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import { jwtDecode } from 'jwt-decode';
 import type { DecodedStaffToken, DecodedCustomerToken, StaffRole } from '../../types/auth';
 
+
 interface AuthState {
   token: string | null;
   userType: 'STAFF' | 'CUSTOMER' | null;

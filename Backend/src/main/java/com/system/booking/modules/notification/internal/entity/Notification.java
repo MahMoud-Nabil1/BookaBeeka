@@ -4,8 +4,12 @@ import com.system.booking.common.model.TenantBaseEntity;
 import com.system.booking.modules.booking.internal.entity.Booking;
 import com.system.booking.modules.customer.internal.entity.Customer;
 import com.system.booking.modules.tenant.internal.entity.Tenant;
+import com.system.booking.modules.notification.api.model.NotificationStatus;
+import com.system.booking.modules.notification.api.model.NotificationType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
@@ -14,6 +18,7 @@ import lombok.Getter;
 import lombok.Setter;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import lombok.Builder;
 import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
@@ -39,8 +44,9 @@ public class Notification extends TenantBaseEntity {
     @JoinColumn(name = "booking_id")
     private Booking booking;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "type", nullable = false, length = 50)
-    private String type;
+    private NotificationType type;
 
     @Column(name = "subject", nullable = false, length = 255)
     private String subject;
@@ -48,9 +54,17 @@ public class Notification extends TenantBaseEntity {
     @Column(name = "body", columnDefinition = "text")
     private String body;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 30)
-    private String status;
+    private NotificationStatus status;
 
     @Column(name = "sent_at")
     private LocalDateTime sentAt;
+
+    @Column(name = "retry_count", nullable = false)
+    @Builder.Default
+    private Integer retryCount = 0;
+
+    @Column(name = "failure_reason", columnDefinition = "text")
+    private String failureReason;
 }

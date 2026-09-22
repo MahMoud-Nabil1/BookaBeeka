@@ -1,7 +1,12 @@
 package com.system.booking.modules.security.controller;
 
 import com.system.booking.modules.security.dto.request.LoginRequest;
+import com.system.booking.modules.security.dto.request.OtpRequest;
+import com.system.booking.modules.security.dto.request.OtpVerificationRequest;
+import com.system.booking.modules.security.dto.request.PasswordResetRequest;
+import com.system.booking.modules.security.dto.request.ResetPasswordRequest;
 import com.system.booking.modules.security.dto.response.LoginResponse;
+import com.system.booking.modules.security.dto.response.OtpVerificationResponse;
 import com.system.booking.modules.security.service.AuthenticationService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -11,8 +16,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Map;
+
 /**
- * Authentication Controller — Role-Segregated Login Endpoints.
+ * Authentication Controller — Role-Segregated Login, OTP, and Password Reset Endpoints.
  *
  * <p><b>Architectural Decision — Why separate endpoints per role?</b></p>
  * <p>Instead of a single generic {@code /login} endpoint that accepts a role flag in
@@ -92,4 +99,52 @@ public class AuthenticationController {
     public ResponseEntity<LoginResponse> customerLogin(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authenticationService.loginCustomer(request));
     }
-}
+
+    /**
+     * Requests an OTP verification code dispatched via email.
+     *
+     * <p>Always returns 200 OK to prevent user enumeration attacks.</p>
+     */
+    @PostMapping("/otp/request")
+    public ResponseEntity<Map<String, String>> requestOtp(@Valid @RequestBody OtpRequest request) {
+        authenticationService.requestOtp(request);
+        return ResponseEntity.ok(Map.of(
+                "message", "If an account exists for this email, a verification code has been dispatched."
+        ));
+    }
+
+    /**
+     * Verifies a 6-digit OTP code against the server-side token store.
+     */
+    @PostMapping("/otp/verify")
+    public ResponseEntity<OtpVerificationResponse> verifyOtp(@Valid @RequestBody OtpVerificationRequest request) {
+        return ResponseEntity.ok(authenticationService.verifyOtp(request));
+    }
+
+    /**
+     * Requests a password reset link dispatched via email.
+     *
+     * <p>Supports both {@code /api/auth/password/forgot} and {@code /api/auth/password-reset/request}.</p>
+     * <p>Always returns 200 OK to prevent user enumeration attacks.</p>
+     */
+    @PostMapping({"/password/forgot", "/password-reset/request"})
+    public ResponseEntity<Map<String, String>> forgotPassword(@Valid @RequestBody PasswordResetRequest request) {
+        authenticationService.requestPasswordReset(request);
+        return ResponseEntity.ok(Map.of(
+                "message", "If an account exists for this email, a password reset link has been dispatched."
+        ));
+    }
+
+    /**
+     * Resets user password after verifying the reset token.
+     *
+     * <p>Supports both {@code /api/auth/password/reset} and {@code /api/auth/password-reset/confirm}.</p>
+     */
+    @PostMapping({"/password/reset", "/password-reset/confirm"})
+    public ResponseEntity<Map<String, String>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        authenticationService.resetPassword(request);
+        return ResponseEntity.ok(Map.of(
+                "message", "Password has been successfully reset. You may now log in with your new credentials."
+        ));
+    }
+}

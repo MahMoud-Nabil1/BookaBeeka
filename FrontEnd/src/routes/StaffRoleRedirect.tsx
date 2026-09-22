@@ -6,14 +6,14 @@ export default function StaffRoleRedirect() {
   const role = useAppSelector(selectRole);
 
   switch (role) {
+    case 'SUPER_ADMIN':
+    case 'OWNER':
     case 'ADMIN':
       return <Navigate to="/staff/admin/overview" replace />;
-    case 'MANAGER':
-      return <Navigate to="/staff/manager/bookings" replace />;
-    case 'RECEPTIONIST':
+    case 'STAFF':
       return <Navigate to="/staff/receptionist/bookings" replace />;
     default:
-      // Fallback if role is unknown or missing, send to login to re-auth
+      // Unknown or missing role — re-auth
       return <Navigate to="/login/staff" replace />;
   }
 }

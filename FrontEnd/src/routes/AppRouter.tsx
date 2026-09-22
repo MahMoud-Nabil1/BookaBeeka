@@ -18,21 +18,17 @@ import CustomerBookingsPage from '../features/bookings/pages/CustomerBookingsPag
 import BookingDetailPage from '../features/bookings/pages/BookingDetailPage';
 import CustomerWalletPage from '../features/billing/pages/CustomerWalletPage';
 import CatalogPage from '../features/catalog/pages/CatalogPage';
-import ResourceDetailPage from '../features/catalog/pages/ResourceDetailPage';
+import RoomDetailPage from '../features/catalog/pages/RoomDetailPage';
+import ProfilePage from '../features/profile/pages/ProfilePage';
 
-// Admin dashboard
+// Admin dashboard (SUPER_ADMIN, OWNER, ADMIN)
 import AdminDashboardLayout from '../features/staff-dashboard/admin/pages/AdminDashboardLayout';
 import AdminOverviewPage from '../features/staff-dashboard/admin/pages/AdminOverviewPage';
 import AdminBookingsPage from '../features/staff-dashboard/admin/pages/AdminBookingsPage';
 import AdminPaymentsPage from '../features/staff-dashboard/admin/pages/AdminPaymentsPage';
 import AdminSchedulePage from '../features/staff-dashboard/admin/pages/AdminSchedulePage';
 
-// Manager dashboard
-import ManagerDashboardLayout from '../features/staff-dashboard/manager/pages/ManagerDashboardLayout';
-import ManagerBookingsPage from '../features/staff-dashboard/manager/pages/ManagerBookingsPage';
-import ManagerPaymentsPage from '../features/staff-dashboard/manager/pages/ManagerPaymentsPage';
-
-// Receptionist dashboard
+// Receptionist dashboard (STAFF role)
 import ReceptionistDashboardLayout from '../features/staff-dashboard/receptionist/pages/ReceptionistDashboardLayout';
 import ReceptionistBookingsPage from '../features/staff-dashboard/receptionist/pages/ReceptionistBookingsPage';
 
@@ -40,61 +36,79 @@ export default function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* ── Public (guest only) ──────────────────────────────────── */}
+        {/* ═══════════════════════════════════════════════════════════
+            PUBLIC ROUTES (No authentication required)
+        ═══════════════════════════════════════════════════════════ */}
+        
+        {/* Landing page */}
+        <Route path="/" element={<LandingPage />} />
+        
+        {/* Auth pages - only accessible when NOT logged in */}
         <Route element={<GuestOnly><Outlet /></GuestOnly>}>
           <Route path="/login/customer" element={<CustomerLoginPage />} />
-          <Route path="/login/staff"    element={<StaffLoginPage />} />
-          <Route path="/register"       element={<CustomerRegisterPage />} />
+          <Route path="/login/staff" element={<StaffLoginPage />} />
+          <Route path="/register" element={<CustomerRegisterPage />} />
         </Route>
 
-        {/* ── Customer portal ──────────────────────────────────────── */}
+        {/* ═══════════════════════════════════════════════════════════
+            CUSTOMER PORTAL (Requires CUSTOMER authentication)
+        ═══════════════════════════════════════════════════════════ */}
+        
         <Route element={<RequireAuth allowedUserType="CUSTOMER"><Outlet /></RequireAuth>}>
-          <Route element={<CustomerPortalLayout />}>
-            <Route path="/portal/catalog"                   element={<CatalogPage />} />
-            <Route path="/portal/catalog/:resourceId"       element={<ResourceDetailPage />} />
-            <Route path="/portal/bookings"                  element={<CustomerBookingsPage />} />
-            <Route path="/portal/bookings/:bookingId"       element={<BookingDetailPage />} />
-            <Route path="/portal/wallet"                    element={<CustomerWalletPage />} />
-            {/* Default customer landing */}
-            <Route path="/portal" element={<Navigate to="/portal/catalog" replace />} />
+          <Route path="/portal" element={<CustomerPortalLayout />}>
+            {/* Browse rooms (catalog) */}
+            <Route index element={<CatalogPage />} />
+            <Route path="rooms" element={<CatalogPage />} />
+            <Route path="rooms/:roomId" element={<RoomDetailPage />} />
+            
+            {/* Bookings */}
+            <Route path="bookings" element={<CustomerBookingsPage />} />
+            <Route path="bookings/:bookingId" element={<BookingDetailPage />} />
+            
+            {/* Wallet */}
+            <Route path="wallet" element={<CustomerWalletPage />} />
+            
+            {/* Profile */}
+            <Route path="profile" element={<ProfilePage />} />
+            
+            {/* Legacy route redirects for backward compatibility */}
+            <Route path="catalog" element={<Navigate to="/portal/rooms" replace />} />
+            <Route path="catalog/:roomId" element={<RoomDetailPage />} />
           </Route>
         </Route>
 
-        {/* ── Staff: role redirect ──────────────────────────────────── */}
-        <Route element={<RequireAuth allowedUserType="STAFF"><Outlet /></RequireAuth>}>
-          <Route path="/staff" element={<StaffRoleRedirect />} />
-
-          {/* ADMIN dashboard */}
-          <Route element={<RequireRole allowedRoles={['ADMIN']}><Outlet /></RequireRole>}>
+        {/* ═══════════════════════════════════════════════════════════
+            STAFF PORTAL (Requires STAFF authentication)
+        ═══════════════════════════════════════════════════════════ */}
+        
+        <Route path="/staff" element={<RequireAuth allowedUserType="STAFF"><Outlet /></RequireAuth>}>
+          {/* Role-based redirect */}
+          <Route index element={<StaffRoleRedirect />} />
+          
+          {/* Admin dashboard (SUPER_ADMIN, OWNER, ADMIN roles) */}
+          <Route path="admin" element={<RequireRole allowedRoles={['SUPER_ADMIN', 'OWNER', 'ADMIN']}><Outlet /></RequireRole>}>
             <Route element={<AdminDashboardLayout />}>
-              <Route path="/staff/admin/overview"  element={<AdminOverviewPage />} />
-              <Route path="/staff/admin/bookings"  element={<AdminBookingsPage />} />
-              <Route path="/staff/admin/payments"  element={<AdminPaymentsPage />} />
-              <Route path="/staff/admin/schedule"  element={<AdminSchedulePage />} />
-              <Route path="/staff/admin" element={<Navigate to="/staff/admin/overview" replace />} />
+              <Route index element={<Navigate to="/staff/admin/overview" replace />} />
+              <Route path="overview" element={<AdminOverviewPage />} />
+              <Route path="bookings" element={<AdminBookingsPage />} />
+              <Route path="payments" element={<AdminPaymentsPage />} />
+              <Route path="schedule" element={<AdminSchedulePage />} />
             </Route>
           </Route>
-
-          {/* MANAGER dashboard */}
-          <Route element={<RequireRole allowedRoles={['MANAGER']}><Outlet /></RequireRole>}>
-            <Route element={<ManagerDashboardLayout />}>
-              <Route path="/staff/manager/bookings" element={<ManagerBookingsPage />} />
-              <Route path="/staff/manager/payments" element={<ManagerPaymentsPage />} />
-              <Route path="/staff/manager" element={<Navigate to="/staff/manager/bookings" replace />} />
-            </Route>
-          </Route>
-
-          {/* RECEPTIONIST dashboard */}
-          <Route element={<RequireRole allowedRoles={['RECEPTIONIST']}><Outlet /></RequireRole>}>
+          
+          {/* Receptionist dashboard (STAFF role) */}
+          <Route path="receptionist" element={<RequireRole allowedRoles={['STAFF']}><Outlet /></RequireRole>}>
             <Route element={<ReceptionistDashboardLayout />}>
-              <Route path="/staff/receptionist/bookings" element={<ReceptionistBookingsPage />} />
-              <Route path="/staff/receptionist" element={<Navigate to="/staff/receptionist/bookings" replace />} />
+              <Route index element={<Navigate to="/staff/receptionist/bookings" replace />} />
+              <Route path="bookings" element={<ReceptionistBookingsPage />} />
             </Route>
           </Route>
         </Route>
 
-        {/* ── Public landing page ────────────────────────────────────── */}
-        <Route path="/" element={<LandingPage />} />
+        {/* ═══════════════════════════════════════════════════════════
+            FALLBACK - Redirect any unknown routes to home
+        ═══════════════════════════════════════════════════════════ */}
+        
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>

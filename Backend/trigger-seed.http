@@ -1,0 +1,14 @@
+### Manually trigger data seeding for all tenants that don't have resources
+POST http://localhost:8081/api/dev/seed/all
+Content-Type: application/json
+
+### Or get the tenant ID first and seed a specific tenant
+### First, register an owner to see the tenant ID in the response, then use it below
+
+### Seed a specific tenant (replace with actual UUID)
+# POST http://localhost:8081/api/dev/seed/tenant/9d6686a3-72ed-4520-a0dd-1cdb1dfadbd9
+# Content-Type: application/json
+
+### Clear resources for a specific tenant (if you need to re-seed)
+# DELETE http://localhost:8081/api/dev/seed/tenant/9d6686a3-72ed-4520-a0dd-1cdb1dfadbd9/resources
+# Content-Type: application/json

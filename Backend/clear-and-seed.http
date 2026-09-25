@@ -1,0 +1,23 @@
+### Step 1: Clear resources for the first tenant
+DELETE http://localhost:8081/api/dev/seed/tenant/61b3cdbd-daf7-4acc-b958-dd40ff800083/resources
+Content-Type: application/json
+
+###
+
+### Step 2: Clear resources for the second tenant  
+DELETE http://localhost:8081/api/dev/seed/tenant/71891fa4-ef81-4108-875a-8db3546437d6/resources
+Content-Type: application/json
+
+###
+
+### Step 3: Seed all tenants again (now they have no resources)
+POST http://localhost:8081/api/dev/seed/all
+Content-Type: application/json
+
+###
+
+### Step 4: Verify the search returns data
+GET http://localhost:8081/api/availability/search?checkIn=2026-09-25&checkOut=2026-09-27
+Accept: application/json
+
+###

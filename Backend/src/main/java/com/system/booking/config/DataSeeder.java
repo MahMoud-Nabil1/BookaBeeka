@@ -6,8 +6,8 @@ import com.system.booking.modules.inventory.internal.entity.ResourceServiceLink;
 import com.system.booking.modules.inventory.internal.repository.ResourceRepository;
 import com.system.booking.modules.inventory.internal.repository.ServiceOfferingRepository;
 import com.system.booking.modules.inventory.internal.repository.ResourceServiceLinkRepository;
-import com.system.booking.modules.tenant.internal.entity.Branch;
-import com.system.booking.modules.tenant.internal.repository.BranchRepository;
+import com.system.booking.modules.tenant.internal.entity.Tenant;
+import com.system.booking.modules.tenant.internal.repository.TenantRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
@@ -33,62 +33,75 @@ public class DataSeeder {
 
     @Bean
     CommandLineRunner seedData(
-            BranchRepository branchRepository,
+            TenantRepository tenantRepository,
             ResourceRepository resourceRepository,
             ServiceOfferingRepository serviceOfferingRepository,
             ResourceServiceLinkRepository resourceServiceLinkRepository) {
         
         return args -> {
-            // Check if we already have data
-            if (resourceRepository.count() > 0) {
-                log.info("Database already contains resources. Skipping seed data.");
+            log.info("DataSeeder: Checking database status...");
+            
+            // Get all tenants
+            List<Tenant> tenants = tenantRepository.findAll();
+            if (tenants.isEmpty()) {
+                log.warn("DataSeeder: No tenants found. Please create a tenant first by registering an owner.");
                 return;
             }
 
-            log.info("Starting database seeding...");
+            log.info("DataSeeder: Found {} tenant(s) in database", tenants.size());
+            
+            // Seed data for each tenant that doesn't have resources yet
+            for (Tenant tenant : tenants) {
+                UUID tenantId = tenant.getId();
+                
+                long existingResources = resourceRepository.countByTenantId(tenantId);
+                if (existingResources > 0) {
+                    log.info("DataSeeder: Tenant '{}' already has {} resources. Skipping.", 
+                        tenant.getName(), existingResources);
+                    continue;
+                }
 
-            // Get the first branch (you should have at least one tenant/branch set up)
-            List<Branch> branches = branchRepository.findAll();
-            if (branches.isEmpty()) {
-                log.warn("No branches found. Please create a tenant and branch first.");
-                return;
+                log.info("DataSeeder: Starting database seeding for tenant: {} ({})", tenant.getName(), tenantId);
+                seedTenantData(tenantId, resourceRepository, serviceOfferingRepository, resourceServiceLinkRepository);
             }
+        };
+    }
 
-            Branch branch = branches.get(0);
-            UUID tenantId = branch.getTenantId();
-
-            log.info("Seeding data for tenant: {}, branch: {}", tenantId, branch.getId());
-
+    private void seedTenantData(UUID tenantId, 
+                               ResourceRepository resourceRepository,
+                               ServiceOfferingRepository serviceOfferingRepository,
+                               ResourceServiceLinkRepository resourceServiceLinkRepository) {
+        try {
             // Create some rooms (resources)
-            Resource room1 = createRoom(tenantId, branch, "Deluxe Suite", "SUITE", 2, 
+            Resource room1 = createRoom(tenantId, "Deluxe Suite", "SUITE", 2, 
                 Map.of(
                     "view", "Ocean View",
                     "bedType", "King",
                     "amenities", List.of("Mini Bar", "Balcony", "Jacuzzi")
                 ));
             
-            Resource room2 = createRoom(tenantId, branch, "Standard Room", "STANDARD", 2,
+            Resource room2 = createRoom(tenantId, "Standard Room", "STANDARD", 2,
                 Map.of(
                     "view", "City View",
                     "bedType", "Queen",
                     "amenities", List.of("WiFi", "TV", "Air Conditioning")
                 ));
             
-            Resource room3 = createRoom(tenantId, branch, "Family Suite", "FAMILY", 4,
+            Resource room3 = createRoom(tenantId, "Family Suite", "FAMILY", 4,
                 Map.of(
                     "view", "Garden View",
                     "bedType", "2 Queen Beds",
                     "amenities", List.of("Kitchen", "Living Room", "Washer/Dryer")
                 ));
             
-            Resource room4 = createRoom(tenantId, branch, "Presidential Suite", "PRESIDENTIAL", 4,
+            Resource room4 = createRoom(tenantId, "Presidential Suite", "PRESIDENTIAL", 4,
                 Map.of(
                     "view", "Panoramic Ocean View",
                     "bedType", "King + Queen",
                     "amenities", List.of("Private Pool", "Butler Service", "Premium Bar", "Home Theater")
                 ));
 
-            Resource room5 = createRoom(tenantId, branch, "Economy Room", "ECONOMY", 1,
+            Resource room5 = createRoom(tenantId, "Economy Room", "ECONOMY", 1,
                 Map.of(
                     "view", "Courtyard View",
                     "bedType", "Twin",
@@ -99,16 +112,16 @@ public class DataSeeder {
             log.info("Created {} rooms", 5);
 
             // Create room types (service offerings)
-            ServiceOffering nightly = createRoomType(tenantId, branch, 
+            ServiceOffering nightly = createRoomType(tenantId, 
                 "Nightly Stay", new BigDecimal("199.99"), 1440, 60);
             
-            ServiceOffering weekly = createRoomType(tenantId, branch,
+            ServiceOffering weekly = createRoomType(tenantId,
                 "Weekly Stay (7 nights)", new BigDecimal("1199.99"), 10080, 60);
             
-            ServiceOffering hourly = createRoomType(tenantId, branch,
+            ServiceOffering hourly = createRoomType(tenantId,
                 "Hourly Booking", new BigDecimal("29.99"), 60, 15);
             
-            ServiceOffering luxury = createRoomType(tenantId, branch,
+            ServiceOffering luxury = createRoomType(tenantId,
                 "Luxury Package", new BigDecimal("499.99"), 1440, 120);
 
             serviceOfferingRepository.saveAll(List.of(nightly, weekly, hourly, luxury));
@@ -132,15 +145,16 @@ public class DataSeeder {
             linkServiceToResource(tenantId, room5, nightly, resourceServiceLinkRepository);
             linkServiceToResource(tenantId, room5, hourly, resourceServiceLinkRepository);
 
-            log.info("Database seeding completed successfully!");
-        };
+            log.info("Database seeding completed successfully for tenant: {}", tenantId);
+        } catch (Exception e) {
+            log.error("Error seeding data for tenant {}: {}", tenantId, e.getMessage(), e);
+        }
     }
 
-    private Resource createRoom(UUID tenantId, Branch branch, String name, 
+    private Resource createRoom(UUID tenantId, String name, 
                                 String resourceType, int capacity, Map<String, Object> specs) {
         return Resource.builder()
                 .tenantId(tenantId)
-                .branch(branch)
                 .name(name)
                 .resourceType(resourceType)
                 .capacity(capacity)
@@ -150,11 +164,10 @@ public class DataSeeder {
                 .build();
     }
 
-    private ServiceOffering createRoomType(UUID tenantId, Branch branch, String name, 
+    private ServiceOffering createRoomType(UUID tenantId, String name, 
                                           BigDecimal price, int durationMinutes, int bufferMinutes) {
         return ServiceOffering.builder()
                 .tenantId(tenantId)
-                .branch(branch)
                 .name(name)
                 .price(price)
                 .durationMinutes(durationMinutes)

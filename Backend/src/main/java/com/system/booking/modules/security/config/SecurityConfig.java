@@ -58,6 +58,11 @@ public class SecurityConfig {
                         .requestMatchers("/api/inventory/**").hasAnyRole("OWNER", "ADMIN")
                         .requestMatchers("/api/availability/room-blocks/**").hasAnyRole("OWNER", "ADMIN")
 
+                        // Media — public photo gallery read
+                        .requestMatchers(HttpMethod.GET, "/api/media/resources/*/photos").permitAll()
+                        // Media — admin management (upload, delete, primary, reorder)
+                        .requestMatchers("/api/media/**").hasAnyRole("OWNER", "ADMIN")
+
                         // Any other request must be authenticated
                         .anyRequest().authenticated()
                 )

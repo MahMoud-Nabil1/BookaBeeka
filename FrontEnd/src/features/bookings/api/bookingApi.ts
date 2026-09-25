@@ -7,23 +7,42 @@ import type {
   CancellationResultDto,
 } from '../../../types/booking';
 
-// ── API Adapters ──────────────────────────────────────────────────────────────
-// Map between frontend hotel terminology and backend generic API
-
 type BackendCreateBookingRequest = {
   tenantId: string;
-  resourceId: string;
-  serviceOfferingId: string;
-  start: string;
-  end: string;
+  roomId?: string;
+  resourceId?: string;
+  serviceOfferingId?: string;
+  start?: string;
+  end?: string;
+  checkInDate?: string;
+  checkOutDate?: string;
+  numberOfRooms?: number;
+  specialRequests?: string;
 };
+
+function mapToBackendBookingRequest(req: CreateBookingRequestDto): BackendCreateBookingRequest {
+  const checkIn = req.start ? req.start.split('T')[0] : undefined;
+  const checkOut = req.end ? req.end.split('T')[0] : undefined;
+  return {
+    tenantId: req.tenantId,
+    roomId: req.roomId,
+    resourceId: req.roomId,
+    serviceOfferingId: req.roomTypeId || undefined,
+    start: req.start,
+    end: req.end,
+    checkInDate: checkIn,
+    checkOutDate: checkOut,
+    numberOfRooms: 1,
+  };
+}
 
 type BackendBookingDto = {
   bookingId: string;
   tenantId: string;
   customerId: string;
-  resourceId: string;
-  serviceOfferingId: string;
+  roomId?: string;
+  resourceId?: string;
+  serviceOfferingId?: string;
   startTime: string;
   endTime: string;
   status: string;
@@ -34,23 +53,13 @@ type BackendBookingDto = {
   createdAt: string;
 };
 
-function mapToBackendBookingRequest(req: CreateBookingRequestDto): BackendCreateBookingRequest {
-  return {
-    tenantId: req.tenantId,
-    resourceId: req.roomId,
-    serviceOfferingId: req.roomTypeId,
-    start: req.start,
-    end: req.end,
-  };
-}
-
 function mapToFrontendBookingDto(backend: BackendBookingDto): BookingDto {
   return {
     bookingId: backend.bookingId,
     tenantId: backend.tenantId,
     customerId: backend.customerId,
-    roomId: backend.resourceId,
-    roomTypeId: backend.serviceOfferingId,
+    roomId: backend.roomId || backend.resourceId || '',
+    roomTypeId: backend.serviceOfferingId || '',
     startTime: backend.startTime,
     endTime: backend.endTime,
     status: backend.status as BookingDto['status'],
@@ -90,31 +99,32 @@ export const bookingApi = {
   // POST /api/bookings/{bookingId}/cancel?tenantId=&reason=
   cancelBooking: async (
     bookingId: string,
-    tenantId: string,
+    tenantId?: string | null,
     reason?: string
   ): Promise<CancellationResultDto> => {
     const response = await api.post(`/api/bookings/${bookingId}/cancel`, null, {
-      params: { tenantId, ...(reason ? { reason } : {}) },
+      params: { ...(tenantId ? { tenantId } : {}), ...(reason ? { reason } : {}) },
     });
     return response.data;
   },
 
-  // GET /api/bookings/{bookingId}/status?tenantId=
+  // GET /api/bookings/{bookingId}/status?tenantId= (tenantId optional)
   getBookingStatus: async (
     bookingId: string,
-    tenantId: string
+    tenantId?: string | null
   ): Promise<BookingStatusDto> => {
     const response = await api.get(`/api/bookings/${bookingId}/status`, {
-      params: { tenantId },
+      params: tenantId ? { tenantId } : {},
     });
     return response.data;
   },
 
-  // GET /api/bookings/mine?tenantId=
+  // GET /api/bookings/mine?tenantId= (tenantId optional)
   // Returns all bookings for the authenticated customer (customerId from JWT)
-  getMyBookings: async (tenantId: string): Promise<BookingDto[]> => {
+  // When tenantId is omitted, returns bookings across all tenants
+  getMyBookings: async (tenantId?: string | null): Promise<BookingDto[]> => {
     const response = await api.get<BackendBookingDto[]>('/api/bookings/mine', {
-      params: { tenantId },
+      params: tenantId ? { tenantId } : {},
     });
     return response.data.map(mapToFrontendBookingDto);
   },

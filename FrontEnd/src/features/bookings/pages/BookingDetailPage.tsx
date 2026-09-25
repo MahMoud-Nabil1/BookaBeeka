@@ -1,10 +1,10 @@
 import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { format } from 'date-fns';
-import { ChevronLeft, CalendarDays, Clock, CreditCard, Loader2, AlertCircle } from 'lucide-react';
+import { ChevronLeft, CalendarDays, Clock, CreditCard, Loader2, AlertCircle, PenLine } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { bookingApi } from '../api/bookingApi';
 import { useCancelBooking } from '../hooks/useCancelBooking';
+import { AddReviewModal } from '../../reviews';
 import BookingStatusBadge from '../../../components/BookingStatusBadge';
 import { useAppSelector } from '../../../redux/hooks';
 import { selectTenantId } from '../../../redux/selectors/authSelectors';
@@ -27,13 +27,23 @@ export default function BookingDetailPage() {
 
   const [reason, setReason] = useState('');
   const [open, setOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
 
   // Fetch status (lightweight — has bookingId, status, version)
   const { data: statusData, isLoading, isError } = useQuery({
     queryKey: ['booking', 'status', bookingId, tenantId],
-    queryFn: () => bookingApi.getBookingStatus(bookingId!, tenantId!),
-    enabled: !!bookingId && !!tenantId,
+    queryFn: () => bookingApi.getBookingStatus(bookingId!, tenantId),
+    enabled: !!bookingId,
   });
+
+  // Fetch full booking details for roomId and tenantId
+  const { data: myBookings } = useQuery({
+    queryKey: ['my-bookings', tenantId],
+    queryFn: () => bookingApi.getMyBookings(tenantId),
+    enabled: !!bookingId,
+  });
+
+  const fullBooking = myBookings?.find((b) => b.bookingId === bookingId);
 
   const handleCancel = () => {
     cancel(
@@ -128,10 +138,20 @@ export default function BookingDetailPage() {
         </Card>
 
         {/* Actions */}
-        <div className="flex gap-3">
+        <div className="flex gap-3 flex-wrap">
           <Button variant="outline" asChild className="flex-1">
             <Link to="/portal/rooms">Book Another Room</Link>
           </Button>
+
+          {statusData.status === 'COMPLETED' && (
+            <Button
+              className="flex-1 gap-2 shadow-low"
+              onClick={() => setReviewOpen(true)}
+            >
+              <PenLine className="h-4 w-4" />
+              Write a Review
+            </Button>
+          )}
 
           {canCancel && (
             <Dialog open={open} onOpenChange={setOpen}>
@@ -168,6 +188,16 @@ export default function BookingDetailPage() {
             </Dialog>
           )}
         </div>
+
+        {fullBooking && (
+          <AddReviewModal
+            open={reviewOpen}
+            onOpenChange={setReviewOpen}
+            serviceId={fullBooking.roomId}
+            tenantId={fullBooking.tenantId || tenantId || ''}
+            preselectedBookingId={bookingId}
+          />
+        )}
       </div>
     </PageLayout>
   );

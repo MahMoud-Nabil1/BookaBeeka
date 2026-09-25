@@ -1,9 +1,10 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { bookingApi } from '../api/bookingApi';
 import { paymentApi } from '../../billing/api/paymentApi';
 import { useAppSelector } from '../../../redux/hooks';
-import { selectUserId, selectTenantId } from '../../../redux/selectors/authSelectors';
+import { selectUserId } from '../../../redux/selectors/authSelectors';
 import type { CreateBookingRequestDto } from '../../../types/booking';
 
 /**
@@ -18,7 +19,7 @@ import type { CreateBookingRequestDto } from '../../../types/booking';
 export function useCreateBooking() {
   const queryClient = useQueryClient();
   const customerId = useAppSelector(selectUserId);
-  const tenantId   = useAppSelector(selectTenantId);
+  const navigate = useNavigate();
 
   return useMutation({
     mutationFn: async (req: CreateBookingRequestDto) => {
@@ -26,15 +27,15 @@ export function useCreateBooking() {
       const confirmation = await bookingApi.createBooking(req);
 
       // Step 2 — wallet checkout
+      // The backend's WalletPaymentService.processPayment already confirms the
+      // booking internally (PENDING_PAYMENT → CONFIRMED), so no separate Step 3
+      // confirm call is needed.
       await paymentApi.checkout({
         bookingId:     confirmation.bookingId,
         customerId:    customerId!,
         tenantId:      req.tenantId,
-        paymentAmount: 0, // amount resolved server-side from the room type price
+        paymentAmount: req.paymentAmount && req.paymentAmount > 0 ? req.paymentAmount : 150,
       });
-
-      // Step 3 — confirm booking
-      await bookingApi.confirmBooking(confirmation.bookingId, req.tenantId);
 
       return confirmation;
     },
@@ -45,8 +46,20 @@ export function useCreateBooking() {
       queryClient.invalidateQueries({ queryKey: ['wallet', 'history', customerId] });
       toast.success('Room booking confirmed!');
     },
-    onError: () => {
-      toast.error('Booking failed. Please check your wallet balance and try again.');
+    onError: (error: any) => {
+      const status = error?.response?.status;
+      if (status === 402) {
+        toast.error('Insufficient wallet balance. Please top up your wallet to proceed.', {
+          action: {
+            label: 'Top Up Wallet',
+            onClick: () => navigate('/portal/wallet'),
+          },
+          duration: 6000,
+        });
+      } else {
+        const msg = error?.response?.data?.message || 'Booking failed. Please try again.';
+        toast.error(msg);
+      }
     },
   });
 }

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useAppSelector } from '../../../redux/hooks';
-import { selectUserId, selectUserType, selectRole } from '../../../redux/selectors/authSelectors';
+import { selectUserType, selectRole } from '../../../redux/selectors/authSelectors';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,7 +21,6 @@ interface UserProfile {
 }
 
 export default function ProfilePage() {
-  const userId = useAppSelector(selectUserId);
   const userType = useAppSelector(selectUserType);
   const role = useAppSelector(selectRole);
   

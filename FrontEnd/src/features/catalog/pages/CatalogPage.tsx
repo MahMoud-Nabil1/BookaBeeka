@@ -1,24 +1,60 @@
 import { Loader2, BedDouble } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import PageLayout from '../../../components/layout/PageLayout';
 import RoomCard from '../components/RoomCard';
-import { useRooms, useAllRoomTypes } from '../hooks/useInventory';
-import { useAppSelector } from '../../../redux/hooks';
-import { selectTenantId } from '../../../redux/selectors/authSelectors';
-import type { RoomTypeResponse } from '../../../types/inventory';
+import api from '../../../config/api';
+import type { RoomResponse, RoomTypeResponse } from '../../../types/inventory';
+
+// Public API to get all available rooms across all tenants (for customer browsing)
+async function getAllAvailableRooms(): Promise<RoomResponse[]> {
+  // For now, we'll use the availability search endpoint
+  // This is a temporary solution until a proper public rooms endpoint is created
+  const today = new Date().toISOString().split('T')[0];
+  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
+  
+  try {
+    const response = await api.get(`/api/availability/search`, {
+      params: {
+        checkIn: today,
+        checkOut: tomorrow,
+        page: 0,
+        size: 100
+      }
+    });
+    
+    // Map availability response to room response format
+    return response.data.content?.map((item: any) => ({
+      id: item.room?.id || item.roomInfo?.roomId,
+      tenantId: item.hotel?.id || item.hotelInfo?.hotelId,
+      hotelName: item.hotel?.name || item.hotelInfo?.hotelName,
+      branchId: '',
+      name: item.room?.name || item.roomInfo?.roomName || item.room?.roomType || 'Standard Room',
+      roomCategory: item.room?.roomType || item.roomInfo?.roomType || 'Standard Room',
+      capacity: item.room?.capacity || item.roomInfo?.capacity || 2,
+      bedType: item.room?.bedType,
+      amenities: item.room?.amenities,
+      specs: item.room?.specs || item.roomInfo?.specs,
+      price: item.pricing?.pricePerNight ?? 150,
+      currency: item.pricing?.currency || 'USD',
+      isActive: true,
+      isBookable: true,
+      createdAt: ''
+    })) || [];
+  } catch (error) {
+    console.error('Failed to fetch rooms:', error);
+    return [];
+  }
+}
 
 export default function CatalogPage() {
-  const tenantId = useAppSelector(selectTenantId);
-
-  const { data: rooms, isLoading: roomsLoading, isError: roomsError } = useRooms(tenantId ?? undefined);
-  const { data: roomTypes } = useAllRoomTypes(tenantId ?? undefined);
+  const { data: rooms, isLoading: roomsLoading, isError: roomsError } = useQuery({
+    queryKey: ['available-rooms'],
+    queryFn: getAllAvailableRooms
+  });
 
   // Build a map of roomId → first linked room type for price/duration display.
-  // The per-room types endpoint exists but we'll use the flat room types list
-  // to avoid N+1 requests on the catalog page.
-  const roomTypeForRoom = (roomId: string): RoomTypeResponse | undefined => {
-    // Room types don't have a direct roomId field in the flat list —
-    // we'll show the cheapest active room type as a default price indicator.
-    return roomTypes?.filter((rt) => rt.isActive).sort((a, b) => a.price - b.price)[0];
+  const roomTypeForRoom = (_roomId: string): RoomTypeResponse | undefined => {
+    return undefined; // Will be implemented when we have linked room types
   };
 
   const availableRooms = rooms?.filter((r) => r.isActive && r.isBookable) ?? [];

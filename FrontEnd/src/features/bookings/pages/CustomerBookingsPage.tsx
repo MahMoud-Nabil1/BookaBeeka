@@ -1,13 +1,13 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { format } from 'date-fns';
-import { CalendarDays, Loader2, PackageSearch, ChevronRight } from 'lucide-react';
+import { CalendarDays, Loader2, PackageSearch, ChevronRight, PenLine } from 'lucide-react';
 import { useMyBookings } from '../hooks/useBookings';
 import { useCancelBooking } from '../hooks/useCancelBooking';
+import { AddReviewModal } from '../../reviews';
 import BookingStatusBadge from '../../../components/BookingStatusBadge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter,
   DialogHeader, DialogTitle, DialogTrigger,
@@ -23,12 +23,13 @@ function BookingRow({ booking }: { booking: BookingDto }) {
   const { mutate: cancel, isPending } = useCancelBooking();
   const [reason, setReason] = useState('');
   const [open, setOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
 
   const canCancel = (CANCELLABLE_STATUSES as readonly string[]).includes(booking.status);
 
   const handleCancel = () => {
     cancel(
-      { bookingId: booking.bookingId, reason: reason || undefined },
+      { bookingId: booking.bookingId, tenantId: booking.tenantId, reason: reason || undefined },
       { onSuccess: () => setOpen(false) }
     );
   };
@@ -64,12 +65,32 @@ function BookingRow({ booking }: { booking: BookingDto }) {
             )}
           </div>
 
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-2 shrink-0 flex-wrap">
             <Button variant="ghost" size="sm" asChild>
               <Link to={`/portal/bookings/${booking.bookingId}`}>
                 Details <ChevronRight className="ml-1 h-4 w-4" />
               </Link>
             </Button>
+
+            {booking.status === 'COMPLETED' && (
+              <Button
+                variant="outline"
+                size="sm"
+                className="gap-1.5 border-primary/40 text-primary hover:bg-primary/5 shadow-none"
+                onClick={() => setReviewOpen(true)}
+              >
+                <PenLine className="h-3.5 w-3.5" />
+                Review Stay
+              </Button>
+            )}
+
+            <AddReviewModal
+              open={reviewOpen}
+              onOpenChange={setReviewOpen}
+              serviceId={booking.roomId}
+              tenantId={booking.tenantId}
+              preselectedBookingId={booking.bookingId}
+            />
 
             {canCancel && (
               <Dialog open={open} onOpenChange={setOpen}>

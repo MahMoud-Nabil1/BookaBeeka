@@ -11,11 +11,11 @@ import { selectUserId, selectTenantId } from '../../../redux/selectors/authSelec
 export function useCancelBooking() {
   const queryClient  = useQueryClient();
   const customerId   = useAppSelector(selectUserId);
-  const tenantId     = useAppSelector(selectTenantId);
+  const authTenantId = useAppSelector(selectTenantId);
 
   return useMutation({
-    mutationFn: ({ bookingId, reason }: { bookingId: string; reason?: string }) =>
-      bookingApi.cancelBooking(bookingId, tenantId!, reason),
+    mutationFn: ({ bookingId, tenantId, reason }: { bookingId: string; tenantId?: string; reason?: string }) =>
+      bookingApi.cancelBooking(bookingId, tenantId ?? authTenantId, reason),
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['bookings', 'mine'] });
       queryClient.invalidateQueries({ queryKey: ['wallet', 'balance', customerId] });

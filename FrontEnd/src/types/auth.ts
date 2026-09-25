@@ -19,17 +19,18 @@ export interface LoginResponse {
 
 export interface DecodedStaffToken {
   sub: string;          // staff UUID
-  user_type: 'STAFF';
+  user_type?: 'STAFF';
   role: StaffRole;
   tenant_id: string;    // UUID string, null for SUPER_ADMIN
-  branch_id: string;    // UUID string, null for SUPER_ADMIN
+  branch_id?: string;   // UUID string, null for SUPER_ADMIN
   iat: number;
   exp: number;
 }
 
 export interface DecodedCustomerToken {
   sub: string;          // customer UUID
-  user_type: 'CUSTOMER';
+  user_type?: 'CUSTOMER';
+  role?: string;
   iat: number;
   exp: number;
 }

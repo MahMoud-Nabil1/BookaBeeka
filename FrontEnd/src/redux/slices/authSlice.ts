@@ -1,7 +1,32 @@
 import { createSlice, type PayloadAction } from '@reduxjs/toolkit';
 import { jwtDecode } from 'jwt-decode';
-import type { DecodedStaffToken, DecodedCustomerToken, StaffRole } from '../../types/auth';
+import type { StaffRole } from '../../types/auth';
 
+interface TokenClaims {
+  sub: string;
+  role?: string;
+  user_type?: 'STAFF' | 'CUSTOMER';
+  tenant_id?: string | null;
+  branch_id?: string | null;
+  exp?: number;
+}
+
+function parseToken(token: string) {
+  const decoded = jwtDecode<TokenClaims>(token);
+  const role = decoded.role;
+  const isCustomer = role === 'CUSTOMER' || decoded.user_type === 'CUSTOMER';
+  const isStaff = !isCustomer && (role === 'STAFF' || role === 'ADMIN' || role === 'OWNER' || role === 'SUPER_ADMIN' || decoded.user_type === 'STAFF');
+  const userType: 'STAFF' | 'CUSTOMER' | null = isStaff ? 'STAFF' : (isCustomer ? 'CUSTOMER' : null);
+
+  return {
+    userId: decoded.sub || null,
+    userType,
+    role: isStaff ? (role as StaffRole) : null,
+    tenantId: decoded.tenant_id ?? null,
+    branchId: decoded.branch_id ?? null,
+    exp: decoded.exp,
+  };
+}
 
 interface AuthState {
   token: string | null;
@@ -28,25 +53,14 @@ const authSlice = createSlice({
     loginSuccess(state, action: PayloadAction<string>) {
       const token = action.payload;
       try {
-        // We peek at the token to determine user_type
-        const baseDecoded = jwtDecode<{ user_type: 'STAFF' | 'CUSTOMER' }>(token);
+        const parsed = parseToken(token);
         
         state.token = token;
-        state.userType = baseDecoded.user_type;
-
-        if (baseDecoded.user_type === 'STAFF') {
-          const decoded = jwtDecode<DecodedStaffToken>(token);
-          state.userId = decoded.sub;
-          state.role = decoded.role;
-          state.tenantId = decoded.tenant_id;
-          state.branchId = decoded.branch_id;
-        } else {
-          const decoded = jwtDecode<DecodedCustomerToken>(token);
-          state.userId = decoded.sub;
-          state.role = null;
-          state.tenantId = null;
-          state.branchId = null;
-        }
+        state.userType = parsed.userType;
+        state.userId = parsed.userId;
+        state.role = parsed.role;
+        state.tenantId = parsed.tenantId;
+        state.branchId = parsed.branchId;
 
         // Persist to localStorage
         localStorage.setItem('auth_token', token);
@@ -67,29 +81,19 @@ const authSlice = createSlice({
       const token = localStorage.getItem('auth_token');
       if (token) {
         try {
+          const parsed = parseToken(token);
           // Check expiration
-          const decoded = jwtDecode<{ exp: number; user_type: 'STAFF' | 'CUSTOMER' }>(token);
-          if (decoded.exp * 1000 < Date.now()) {
+          if (parsed.exp && parsed.exp * 1000 < Date.now()) {
             localStorage.removeItem('auth_token');
             return;
           }
           
           state.token = token;
-          state.userType = decoded.user_type;
-          
-          if (decoded.user_type === 'STAFF') {
-            const staffDecoded = jwtDecode<DecodedStaffToken>(token);
-            state.userId = staffDecoded.sub;
-            state.role = staffDecoded.role;
-            state.tenantId = staffDecoded.tenant_id;
-            state.branchId = staffDecoded.branch_id;
-          } else {
-            const customerDecoded = jwtDecode<DecodedCustomerToken>(token);
-            state.userId = customerDecoded.sub;
-            state.role = null;
-            state.tenantId = null;
-            state.branchId = null;
-          }
+          state.userType = parsed.userType;
+          state.userId = parsed.userId;
+          state.role = parsed.role;
+          state.tenantId = parsed.tenantId;
+          state.branchId = parsed.branchId;
         } catch (err) {
           localStorage.removeItem('auth_token');
         }

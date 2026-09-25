@@ -12,6 +12,8 @@ import CustomerRegisterPage from '../features/customer-portal/pages/CustomerRegi
 import CustomerPortalLayout from '../features/customer-portal/pages/CustomerPortalLayout';
 import StaffLoginPage from '../features/staff-dashboard/pages/StaffLoginPage';
 import LandingPage from '../pages/LandingPage';
+import ForgotPasswordPage from '../features/auth/pages/ForgotPasswordPage';
+import ResetPasswordPage from '../features/auth/pages/ResetPasswordPage';
 
 // Customer portal pages
 import CustomerBookingsPage from '../features/bookings/pages/CustomerBookingsPage';
@@ -48,6 +50,8 @@ export default function AppRouter() {
           <Route path="/login/customer" element={<CustomerLoginPage />} />
           <Route path="/login/staff" element={<StaffLoginPage />} />
           <Route path="/register" element={<CustomerRegisterPage />} />
+          <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
         </Route>
 
         {/* ═══════════════════════════════════════════════════════════
@@ -74,6 +78,9 @@ export default function AppRouter() {
             {/* Legacy route redirects for backward compatibility */}
             <Route path="catalog" element={<Navigate to="/portal/rooms" replace />} />
             <Route path="catalog/:roomId" element={<RoomDetailPage />} />
+
+            {/* Fallback for unknown /portal routes */}
+            <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Route>
 
@@ -93,6 +100,7 @@ export default function AppRouter() {
               <Route path="bookings" element={<AdminBookingsPage />} />
               <Route path="payments" element={<AdminPaymentsPage />} />
               <Route path="schedule" element={<AdminSchedulePage />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Route>
           
@@ -101,8 +109,12 @@ export default function AppRouter() {
             <Route element={<ReceptionistDashboardLayout />}>
               <Route index element={<Navigate to="/staff/receptionist/bookings" replace />} />
               <Route path="bookings" element={<ReceptionistBookingsPage />} />
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Route>
+
+          {/* Fallback for unknown /staff routes */}
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
 
         {/* ═══════════════════════════════════════════════════════════

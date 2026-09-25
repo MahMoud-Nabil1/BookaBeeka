@@ -13,6 +13,7 @@ export interface CreateBookingRequestDto {
   roomTypeId: string;          // Maps to backend: serviceOfferingId
   start: string;               // OffsetDateTime ISO string (check-in)
   end: string;                 // OffsetDateTime ISO string (check-out)
+  paymentAmount?: number;
 }
 
 // 201 response from POST /api/bookings

@@ -29,12 +29,6 @@ export default function Navbar({ onMenuClick, showMenuBtn = false }: NavbarProps
     }
   };
 
-  const getPortalLink = () => {
-    if (!isAuthenticated) return '/';
-    if (userType === 'STAFF') return '/staff';
-    return '/portal';
-  };
-
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 shadow-low">
       <div className="container flex h-16 items-center justify-between px-4 sm:px-6 lg:px-8 mx-auto max-w-7xl">
@@ -46,7 +40,7 @@ export default function Navbar({ onMenuClick, showMenuBtn = false }: NavbarProps
             </Button>
           )}
           
-          <Link to={getPortalLink()} className="flex items-center gap-2">
+          <Link to="/" className="flex items-center gap-2">
             {/* Brand Logo */}
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary">
               <span className="font-bold text-white leading-none">B</span>

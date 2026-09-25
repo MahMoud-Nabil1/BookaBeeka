@@ -25,7 +25,10 @@ export default function RequireAuth({ children, allowedUserType }: RequireAuthPr
     if (userType === 'STAFF') {
       return <Navigate to="/staff" replace />;
     }
-    return <Navigate to="/portal" replace />;
+    if (userType === 'CUSTOMER') {
+      return <Navigate to="/portal" replace />;
+    }
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;

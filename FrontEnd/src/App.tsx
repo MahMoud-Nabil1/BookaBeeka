@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useAppDispatch } from './redux/hooks'
 import { initFromStorage } from './redux/slices/authSlice'
 import AppRouter from './routes/AppRouter'
+import { Toaster } from 'sonner'
 import './App.css'
 
 function App() {
@@ -12,7 +13,12 @@ function App() {
     dispatch(initFromStorage())
   }, [dispatch])
 
-  return <AppRouter />
+  return (
+    <>
+      <AppRouter />
+      <Toaster position="top-right" richColors />
+    </>
+  )
 }
 
 export default App

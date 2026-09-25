@@ -142,19 +142,10 @@ public class AvailabilityModuleApiImpl implements AvailabilityModuleApi {
         String resourceType = (String) row[2];
         Integer capacity = row[3] != null ? ((Number) row[3]).intValue() : null;
         // row[4] = specs (String/PGobject) — pass as-is for now
-        @SuppressWarnings("unchecked")
-        Map<String, Object> specs = null; // JSONB returned as string; parse if needed
-        BigDecimal pricePerNight = row[5] != null ? new BigDecimal(row[5].toString()) : null;
-        String currency = (String) row[6];
-        UUID hotelId = (UUID) row[7];
-        String hotelName = (String) row[8];
-        String subdomain = (String) row[9];
-
-        // Extract bedType from specs if available
+        Map<String, Object> specs = null;
         String bedType = null;
         if (row[4] != null) {
             String specsStr = row[4].toString();
-            // Simple JSON parsing for bedType
             if (specsStr.contains("\"bedType\"")) {
                 int idx = specsStr.indexOf("\"bedType\"");
                 int start = specsStr.indexOf("\"", idx + 10) + 1;
@@ -164,6 +155,12 @@ public class AvailabilityModuleApiImpl implements AvailabilityModuleApi {
                 }
             }
         }
+
+        BigDecimal pricePerNight = row[5] != null ? new BigDecimal(row[5].toString()) : null;
+        String currency = (String) row[6];
+        UUID hotelId = (UUID) row[7];
+        String hotelName = (String) row[8];
+        String subdomain = (String) row[9];
 
         // Fetch amenity names for this room
         List<String> amenityNames = resourceAmenityRepository.findByResourceId(roomId).stream()
@@ -176,7 +173,7 @@ public class AvailabilityModuleApiImpl implements AvailabilityModuleApi {
 
         return new AvailableRoomResponse(
                 new HotelInfo(hotelId, hotelName, subdomain),
-                new RoomInfo(roomId, resourceType, capacity, bedType, amenityNames, specs),
+                new RoomInfo(roomId, roomName, resourceType, capacity, bedType, amenityNames, specs),
                 new StayInfo(checkIn, checkOut, (int) nights),
                 new PricingInfo(pricePerNight, totalPrice, currency)
         );

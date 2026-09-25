@@ -89,8 +89,12 @@ public class PaymentHistoryService {
                         w.getBalance(),
                         w.getCurrency(),
                         w.getUpdatedAt()))
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "No wallet found for customer: " + customerId));
+                .orElseGet(() -> new CustomerBalanceResponse(
+                        null,
+                        customerId,
+                        BigDecimal.ZERO,
+                        "USD",
+                        java.time.LocalDateTime.now()));
     }
 
     // -------------------------------------------------------------------------

@@ -14,4 +14,6 @@ public interface ServiceOfferingRepository extends JpaRepository<ServiceOffering
     Optional<ServiceOffering> findByTenantIdAndId(UUID tenantId, UUID id);
     boolean existsByTenantIdAndNameIgnoreCase(UUID tenantId, String name);
     boolean existsByTenantIdAndNameIgnoreCaseAndIdNot(UUID tenantId, String name, UUID id);
+    long countByTenantId(UUID tenantId);
+    void deleteByTenantId(UUID tenantId);
 }

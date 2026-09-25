@@ -6,9 +6,11 @@ import java.util.UUID;
 
 public record RoomInfo(
         UUID id,
+        String name,
         String roomType,
         Integer capacity,
         String bedType,
         List<String> amenities,
         Map<String, Object> specs
 ) {}
+

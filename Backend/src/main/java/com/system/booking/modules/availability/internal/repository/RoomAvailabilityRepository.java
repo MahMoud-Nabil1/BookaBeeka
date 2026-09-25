@@ -79,8 +79,8 @@ public class RoomAvailabilityRepository {
                 r.resource_type,
                 r.capacity,
                 r.specs,
-                r.price_per_night,
-                r.currency,
+                COALESCE(r.price_per_night, 150.00) AS price_per_night,
+                COALESCE(r.currency, 'USD')         AS currency,
                 t.id          AS hotel_id,
                 t.name        AS hotel_name,
                 t.subdomain

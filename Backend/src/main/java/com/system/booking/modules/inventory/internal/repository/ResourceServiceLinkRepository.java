@@ -18,4 +18,5 @@ public interface ResourceServiceLinkRepository extends JpaRepository<ResourceSer
     boolean existsByTenantIdAndResourceIdAndServiceOfferingId(UUID tenantId, UUID resourceId, UUID serviceOfferingId);
     void deleteByResourceIdAndServiceOfferingId(UUID resourceId, UUID serviceOfferingId);
     void deleteByTenantIdAndResourceIdAndServiceOfferingId(UUID tenantId, UUID resourceId, UUID serviceOfferingId);
+    void deleteByTenantId(UUID tenantId);
 }

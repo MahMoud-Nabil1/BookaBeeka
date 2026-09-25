@@ -27,6 +27,8 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
 
     List<Booking> findByTenantIdAndCustomerId(UUID tenantId, UUID customerId);
 
+    List<Booking> findByCustomerId(UUID customerId);
+
     // for the expiry sweep — finds stale pending bookings
     List<Booking> findByStatusAndCreatedAtBefore(BookingStatus status, LocalDateTime cutoff);
 

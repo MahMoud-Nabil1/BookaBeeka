@@ -14,6 +14,7 @@ import com.system.booking.modules.customer.internal.repository.CustomerRepositor
 import com.system.booking.modules.notification.api.event.NotificationEvent;
 import com.system.booking.modules.notification.api.model.NotificationType;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,6 +26,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class BookingCreationService {
@@ -51,54 +53,69 @@ public class BookingCreationService {
             );
         }
 
-        // step 2: resolve price — from service offering if provided, else from room's pricePerNight × nights
+        // step 2: resolve dates
+        java.time.LocalDate checkIn = request.checkInDate() != null
+                ? request.checkInDate()
+                : (request.start() != null ? request.start().toLocalDate() : java.time.LocalDate.now());
+        java.time.LocalDate checkOut = request.checkOutDate() != null
+                ? request.checkOutDate()
+                : (request.end() != null ? request.end().toLocalDate() : checkIn.plusDays(1));
+
+        // step 3: resolve price — from service offering if provided, else from room's pricePerNight × nights
         java.math.BigDecimal basePrice;
+        var room = request.roomId() != null
+                ? inventoryApi.getResourceByTenantAndId(request.tenantId(), request.roomId())
+                : null;
+
         if (request.serviceOfferingId() != null) {
             ServiceOfferingResponse service = inventoryApi.getServiceOfferingByTenantAndId(
                     request.tenantId(), request.serviceOfferingId());
             basePrice = service.price();
         } else {
             // Hotel room booking: price = pricePerNight × nights
-            var room = inventoryApi.getResourceByTenantAndId(request.tenantId(), request.roomId());
-            if (room.pricePerNight() == null) {
-                throw new IllegalArgumentException(
-                    "Room has no pricePerNight set and no serviceOfferingId was provided. " +
-                    "Either set a price on the room or pass a serviceOfferingId.");
+            java.math.BigDecimal price = room != null ? room.pricePerNight() : null;
+            if (price == null && room != null && room.roomTypeId() != null) {
+                try {
+                    var roomType = inventoryApi.getRoomTypeByTenantAndId(request.tenantId(), room.roomTypeId());
+                    price = roomType.basePricePerNight();
+                } catch (Exception ignored) {}
             }
-            long nights = ChronoUnit.DAYS.between(request.checkInDate(), request.checkOutDate());
+            if (price == null) {
+                price = java.math.BigDecimal.valueOf(150.00); // Standard default rate matching discovery search
+            }
+            long nights = ChronoUnit.DAYS.between(checkIn, checkOut);
             if (nights <= 0) nights = 1;
-            basePrice = room.pricePerNight().multiply(java.math.BigDecimal.valueOf(nights));
+            basePrice = price.multiply(java.math.BigDecimal.valueOf(nights));
         }
 
         int rooms = request.numberOfRooms() != null && request.numberOfRooms() > 0
                 ? request.numberOfRooms() : 1;
 
-        // step 3: hotel date-range availability check
-        // IMPORTANT: isRangeAvailable() is the LEGACY slot-based check (requires ScheduleRule records).
-        // For hotel bookings we use isRoomAvailableForDates() which checks check_in/check_out
-        // directly against the booking table — no schedule rules needed.
-        boolean available = availabilityApi.isRoomAvailableForDates(
-                request.roomId(), request.checkInDate(), request.checkOutDate());
-        if (!available) {
-            throw new SlotUnavailableException("Room is not available for the requested dates");
+        // step 4: hotel date-range availability check
+        if (request.roomId() != null) {
+            boolean available = availabilityApi.isRoomAvailableForDates(
+                    request.roomId(), checkIn, checkOut);
+            if (!available) {
+                throw new SlotUnavailableException("Room is not available for the requested dates");
+            }
         }
 
-        // step 4: persist the booking
+        // step 5: persist the booking
         Booking booking = Booking.builder()
                 .tenantId(request.tenantId())
                 .customerId(customerId)
                 .roomId(request.roomId())
                 .serviceOfferingId(request.serviceOfferingId())
-                .startTime(request.start())
-                .endTime(request.end())
-                .checkIn(request.checkInDate())
-                .checkOut(request.checkOutDate())
-                .numberOfRooms(request.numberOfRooms() != null ? request.numberOfRooms() : 1)
+                .startTime(request.start() != null ? request.start() : checkIn.atTime(14, 0).atOffset(ZoneOffset.UTC))
+                .endTime(request.end() != null ? request.end() : checkOut.atTime(11, 0).atOffset(ZoneOffset.UTC))
+                .checkIn(checkIn)
+                .checkOut(checkOut)
+                .numberOfRooms(rooms)
                 .specialRequests(request.specialRequests())
                 .metadata(request.metadata() != null ? request.metadata() : Map.of())
                 .status(BookingStatus.PENDING_PAYMENT)
                 .totalAmount(basePrice.multiply(java.math.BigDecimal.valueOf(rooms)))
-                .currency("USD")
+                .currency(room != null && room.currency() != null ? room.currency() : "USD")
                 .build();
         final Booking savedBooking = bookingRepo.save(booking);
 
@@ -106,7 +123,7 @@ public class BookingCreationService {
                 ? savedBooking.getCreatedAt().atOffset(ZoneOffset.UTC)
                 : OffsetDateTime.now();
 
-        // step 5: save idempotency response
+        // step 6: save idempotency response
         Map<String, Object> responseBody = Map.of(
                 "bookingId", savedBooking.getId().toString(),
                 "status",    savedBooking.getStatus().name(),
@@ -114,30 +131,36 @@ public class BookingCreationService {
         );
         idempotencyService.complete(request.tenantId(), idempotencyKey, 201, responseBody);
 
-        // step 6: fire event (runs after commit)
+        // step 7: fire event (runs after commit)
         eventPublisher.publishEvent(new BookingCreatedEvent(
                 savedBooking.getId(), savedBooking.getTenantId(), savedBooking.getCustomerId(),
                 savedBooking.getRoomId(), savedBooking.getTotalAmount(), createdAtOdt));
 
-        // step 7: dispatch notification event
+        // step 8: dispatch notification event
         customerRepo.findById(customerId).ifPresent(customer -> {
-            eventPublisher.publishEvent(NotificationEvent.of(
-                    savedBooking.getTenantId(),
-                    savedBooking.getCustomerId(),
-                    savedBooking.getId(),
-                    NotificationType.BOOKING_CONFIRMED,
-                    "Reservation Created - Hotel Booking #" + savedBooking.getId().toString().substring(0, 8),
-                    customer.getEmail(),
-                    "Your booking has been reserved successfully.",
-                    Map.of(
-                            "bookingId", savedBooking.getId().toString(),
-                            "customerName", customer.getFirstName() + " " + customer.getLastName(),
-                            "checkIn", savedBooking.getCheckIn() != null ? savedBooking.getCheckIn().toString() : "",
-                            "checkOut", savedBooking.getCheckOut() != null ? savedBooking.getCheckOut().toString() : "",
-                            "totalAmount", savedBooking.getTotalAmount() != null ? savedBooking.getTotalAmount().toString() : "0.00",
-                            "currency", savedBooking.getCurrency()
-                    )
-            ));
+            try {
+                String customerName = ((customer.getFirstName() != null ? customer.getFirstName() : "") + " " +
+                        (customer.getLastName() != null ? customer.getLastName() : "")).trim();
+                eventPublisher.publishEvent(NotificationEvent.of(
+                        savedBooking.getTenantId(),
+                        savedBooking.getCustomerId(),
+                        savedBooking.getId(),
+                        NotificationType.BOOKING_CONFIRMED,
+                        "Reservation Created - Hotel Booking #" + savedBooking.getId().toString().substring(0, 8),
+                        customer.getEmail(),
+                        "Your booking has been reserved successfully.",
+                        Map.of(
+                                "bookingId", savedBooking.getId().toString(),
+                                "customerName", customerName.isEmpty() ? "Guest" : customerName,
+                                "checkIn", savedBooking.getCheckIn() != null ? savedBooking.getCheckIn().toString() : "",
+                                "checkOut", savedBooking.getCheckOut() != null ? savedBooking.getCheckOut().toString() : "",
+                                "totalAmount", savedBooking.getTotalAmount() != null ? savedBooking.getTotalAmount().toString() : "0.00",
+                                "currency", savedBooking.getCurrency() != null ? savedBooking.getCurrency() : "USD"
+                        )
+                ));
+            } catch (Exception e) {
+                log.warn("Failed to dispatch booking creation notification: {}", e.getMessage());
+            }
         });
 
         return new BookingConfirmationDto(

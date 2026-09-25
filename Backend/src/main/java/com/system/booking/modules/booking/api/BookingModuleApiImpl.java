@@ -9,6 +9,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -76,15 +77,21 @@ public class BookingModuleApiImpl implements BookingModuleApi {
 
     @Override
     public BookingStatusDto getBookingStatus(UUID tenantId, UUID bookingId) {
-        Booking booking = bookingRepo.findByTenantIdAndId(tenantId, bookingId)
-                .orElseThrow(() -> new EntityNotFoundException("Booking not found: " + bookingId));
+        Booking booking = (tenantId != null)
+                ? bookingRepo.findByTenantIdAndId(tenantId, bookingId)
+                        .orElseThrow(() -> new EntityNotFoundException("Booking not found: " + bookingId))
+                : bookingRepo.findById(bookingId)
+                        .orElseThrow(() -> new EntityNotFoundException("Booking not found: " + bookingId));
         return new BookingStatusDto(booking.getId(), booking.getStatus().name(), booking.getVersion());
     }
 
     @Override
     public BookingDto getBookingById(UUID tenantId, UUID bookingId) {
-        Booking booking = bookingRepo.findByTenantIdAndId(tenantId, bookingId)
-                .orElseThrow(() -> new EntityNotFoundException("Booking not found: " + bookingId));
+        Booking booking = (tenantId != null)
+                ? bookingRepo.findByTenantIdAndId(tenantId, bookingId)
+                        .orElseThrow(() -> new EntityNotFoundException("Booking not found: " + bookingId))
+                : bookingRepo.findById(bookingId)
+                        .orElseThrow(() -> new EntityNotFoundException("Booking not found: " + bookingId));
         return toDto(booking);
     }
 
@@ -96,18 +103,33 @@ public class BookingModuleApiImpl implements BookingModuleApi {
                 .toList();
     }
 
+    @Override
+    public List<BookingDto> listBookingsForCustomer(UUID customerId) {
+        return bookingRepo.findByCustomerId(customerId)
+                .stream()
+                .map(this::toDto)
+                .toList();
+    }
+
     // maps entity to DTO
     private BookingDto toDto(Booking b) {
         return new BookingDto(
-                b.getId(), b.getTenantId(), b.getCustomerId(), b.getRoomId(),
+                b.getId(),
+                b.getTenantId(),
+                b.getCustomerId(),
+                b.getRoomId(),
                 b.getServiceOfferingId(),
-                b.getStartTime(), b.getEndTime(),
-                b.getCheckIn(), b.getCheckOut(),
-                b.getNumberOfRooms(),
-                b.getStatus().name(),
-                b.getTotalAmount(), b.getCurrency(),
-                b.getSpecialRequests(), b.getCancellationReason(),
-                b.getVersion(),
+                b.getStartTime(),
+                b.getEndTime(),
+                b.getCheckIn(),
+                b.getCheckOut(),
+                b.getNumberOfRooms() != null ? b.getNumberOfRooms() : 1,
+                b.getStatus() != null ? b.getStatus().name() : "PENDING_PAYMENT",
+                b.getTotalAmount() != null ? b.getTotalAmount() : BigDecimal.ZERO,
+                b.getCurrency() != null ? b.getCurrency() : "USD",
+                b.getSpecialRequests(),
+                b.getCancellationReason(),
+                b.getVersion() != null ? b.getVersion() : 0,
                 b.getCreatedAt() != null ? b.getCreatedAt().atOffset(ZoneOffset.UTC) : null);
     }
 }

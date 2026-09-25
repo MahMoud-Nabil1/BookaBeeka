@@ -18,6 +18,7 @@ import com.system.booking.modules.security.port.in.OwnerAuthPort;
 import com.system.booking.modules.security.port.in.SuperAdminAuthPort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -34,6 +35,9 @@ import java.util.UUID;
 public class AuthenticationService {
 
     private static final UUID PLATFORM_FALLBACK_TENANT_ID = UUID.fromString("00000000-0000-0000-0000-000000000000");
+
+    @Value("${app.base-url:http://localhost:5173}")
+    private String appBaseUrl;
 
     private final SuperAdminAuthPort superAdminPort;
     private final OwnerAuthPort ownerPort;
@@ -146,6 +150,7 @@ public class AuthenticationService {
 
             log.info("Publishing Password Reset NotificationEvent for user [{}] under tenant [{}]", user.email(), tenantId);
 
+            String resetUrl = appBaseUrl + "/reset-password?token=" + resetToken;
             NotificationEvent event = NotificationEvent.of(
                     tenantId,
                     user.id(),
@@ -153,10 +158,10 @@ public class AuthenticationService {
                     NotificationType.PASSWORD_RESET,
                     "Password Reset Request - BookaBeeka",
                     user.email(),
-                    "To reset your password, visit: https://bookabeeka.com/reset-password?token=" + resetToken,
+                    "To reset your password, visit: " + resetUrl,
                     Map.of(
                             "resetToken", resetToken,
-                            "resetUrl", "https://bookabeeka.com/reset-password?token=" + resetToken,
+                            "resetUrl", resetUrl,
                             "customerName", user.email(),
                             "expiryMinutes", 15
                     )
@@ -215,4 +220,4 @@ public class AuthenticationService {
         String token = jwtService.generateToken(user);
         return new LoginResponse(token, user.role());
     }
-}
+}

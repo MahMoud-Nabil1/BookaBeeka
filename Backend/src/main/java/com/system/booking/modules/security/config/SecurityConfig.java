@@ -43,6 +43,9 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/super/login").permitAll()
                         .requestMatchers("/api/tenants/subdomain/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/availability/search").permitAll()
+                        
+                        // Development endpoints (only active in dev profile)
+                        .requestMatchers("/api/dev/**").permitAll()
 
                         // Platform SuperAdmin only
                         .requestMatchers("/api/admin/super/**").hasRole("SUPER_ADMIN")

@@ -44,6 +44,18 @@ public class ReviewController {
         return ResponseEntity.ok(reviews);
     }
 
+    // public listing of reviews for a given room (resource) — used by the catalog/detail page
+    @GetMapping("/room/{roomId}")
+    public ResponseEntity<Page<ReviewResponseDto>> getReviewsForRoom(
+            @PathVariable UUID roomId,
+            @RequestParam UUID tenantId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+
+        Page<ReviewResponseDto> reviews = reviewService.getReviewsForRoom(tenantId, roomId, PageRequest.of(page, size));
+        return ResponseEntity.ok(reviews);
+    }
+
     // the logged-in customer's own review history, across every tenant they've booked with
     @GetMapping("/mine")
     @PreAuthorize("hasRole('CUSTOMER')")

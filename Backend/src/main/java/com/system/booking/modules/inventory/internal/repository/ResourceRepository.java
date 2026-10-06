@@ -16,4 +16,6 @@ public interface ResourceRepository extends JpaRepository<Resource, UUID> {
     boolean existsByTenantIdAndRoomNumber(UUID tenantId, String roomNumber);
     boolean existsByTenantIdAndRoomNumberAndIdNot(UUID tenantId, String roomNumber, UUID id);
     boolean existsByTenantIdAndId(UUID tenantId, UUID id);
+    long countByTenantId(UUID tenantId);
+    void deleteByTenantId(UUID tenantId);
 }

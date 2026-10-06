@@ -18,6 +18,7 @@ import com.system.booking.modules.security.port.in.OwnerAuthPort;
 import com.system.booking.modules.security.port.in.SuperAdminAuthPort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -34,6 +35,9 @@ import java.util.UUID;
 public class AuthenticationService {
 
     private static final UUID PLATFORM_FALLBACK_TENANT_ID = UUID.fromString("00000000-0000-0000-0000-000000000000");
+
+    @Value("${app.base-url:http://localhost:5173}")
+    private String appBaseUrl;
 
     private final SuperAdminAuthPort superAdminPort;
     private final OwnerAuthPort ownerPort;
@@ -60,6 +64,59 @@ public class AuthenticationService {
         var user = hotelAdminPort.findAdminByEmail(request.email())
                 .orElseThrow(() -> new BadCredentialsException("Invalid email or password"));
         return verifyAndIssueToken(user, request.password());
+    }
+
+    /**
+     * Unified login method for OWNER and ADMIN roles only.
+     * 
+     * <p>Attempts authentication against Owner and Admin user types in sequence:
+     * <ol>
+     *   <li>Owner - Hotel owner with tenant-scoped access</li>
+     *   <li>Admin - Branch admin with tenant and branch-scoped access</li>
+     * </ol>
+     * </p>
+     * 
+     * <p><strong>Security Enforcement:</strong> This method explicitly REJECTS SuperAdmin credentials
+     * to enforce proper role separation. SuperAdmins must use the dedicated
+     * {@code /api/auth/super-admin/login} endpoint.</p>
+     * 
+     * <p>Returns a JWT token for the first successful authentication match.
+     * Throws BadCredentialsException if credentials don't match any allowed role.</p>
+     * 
+     * @param request Login credentials (email and password)
+     * @return LoginResponse containing JWT token and user role
+     * @throws BadCredentialsException if authentication fails for all allowed roles or if SuperAdmin credentials are provided
+     */
+    public LoginResponse loginOwnerOrAdmin(LoginRequest request) {
+        // SECURITY: Explicitly reject SuperAdmin credentials - they must use /super-admin/login
+        var superAdmin = superAdminPort.findSuperAdminByEmail(request.email());
+        if (superAdmin.isPresent()) {
+            log.warn("SuperAdmin attempted to login via /owner/login endpoint. Email: {}", request.email());
+            throw new BadCredentialsException("Invalid email or password");
+        }
+
+        // Try Owner
+        var owner = ownerPort.findOwnerByEmail(request.email());
+        if (owner.isPresent()) {
+            try {
+                return verifyAndIssueToken(owner.get(), request.password());
+            } catch (BadCredentialsException e) {
+                // Wrong password for this owner, continue to next check
+            }
+        }
+
+        // Try Admin
+        var admin = hotelAdminPort.findAdminByEmail(request.email());
+        if (admin.isPresent()) {
+            try {
+                return verifyAndIssueToken(admin.get(), request.password());
+            } catch (BadCredentialsException e) {
+                // Wrong password for this admin, throw final exception
+            }
+        }
+
+        // No user found with this email in Owner or Admin tables
+        throw new BadCredentialsException("Invalid email or password");
     }
 
     public LoginResponse loginCustomer(LoginRequest request) {
@@ -113,7 +170,13 @@ public class AuthenticationService {
      * @return Verification response.
      */
     public OtpVerificationResponse verifyOtp(OtpVerificationRequest request) {
-        var entry = tokenStore.verifyAndConsumeOtp(request.email(), request.tenantId(), request.otpCode());
+        // Resolve the same effectiveTenant used during storeOtp to ensure the cache key matches.
+        // storeOtp uses: user.tenantId() != null ? user.tenantId() : request.tenantId()
+        UUID verifyTenantId = findUserByEmail(request.email())
+                .map(u -> u.tenantId() != null ? u.tenantId() : request.tenantId())
+                .orElse(request.tenantId());
+
+        var entry = tokenStore.verifyAndConsumeOtp(request.email(), verifyTenantId, request.otpCode());
 
         // Establish tenant context if the user is tenant-scoped
         if (entry.tenantId() != null && !PLATFORM_FALLBACK_TENANT_ID.equals(entry.tenantId())) {
@@ -146,6 +209,7 @@ public class AuthenticationService {
 
             log.info("Publishing Password Reset NotificationEvent for user [{}] under tenant [{}]", user.email(), tenantId);
 
+            String resetUrl = appBaseUrl + "/reset-password?token=" + resetToken;
             NotificationEvent event = NotificationEvent.of(
                     tenantId,
                     user.id(),
@@ -153,10 +217,10 @@ public class AuthenticationService {
                     NotificationType.PASSWORD_RESET,
                     "Password Reset Request - BookaBeeka",
                     user.email(),
-                    "To reset your password, visit: https://bookabeeka.com/reset-password?token=" + resetToken,
+                    "To reset your password, visit: " + resetUrl,
                     Map.of(
                             "resetToken", resetToken,
-                            "resetUrl", "https://bookabeeka.com/reset-password?token=" + resetToken,
+                            "resetUrl", resetUrl,
                             "customerName", user.email(),
                             "expiryMinutes", 15
                     )
@@ -213,6 +277,12 @@ public class AuthenticationService {
         }
 
         String token = jwtService.generateToken(user);
-        return new LoginResponse(token, user.role());
+        
+        // Map roles to userType for frontend routing
+        // SUPER_ADMIN, OWNER, ADMIN, and STAFF all map to "STAFF" userType
+        // CUSTOMER maps to "CUSTOMER" userType
+        String userType = "CUSTOMER".equals(user.role()) ? "CUSTOMER" : "STAFF";
+        
+        return new LoginResponse(token, userType);
     }
-}
+}

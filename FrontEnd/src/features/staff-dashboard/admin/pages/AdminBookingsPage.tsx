@@ -69,7 +69,7 @@ export default function AdminBookingsPage() {
       {!isLoading && !isError && sorted.length > 0 && (
         <div className="space-y-3">
           {sorted.map((b) => (
-            <StaffBookingCard key={b.bookingId} booking={b} canCancel={true} />
+            <StaffBookingCard key={b.bookingId} booking={b} canCancel={true} canComplete={true} />
           ))}
         </div>
       )}

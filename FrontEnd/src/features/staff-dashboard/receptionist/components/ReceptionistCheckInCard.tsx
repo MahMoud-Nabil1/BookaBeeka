@@ -3,7 +3,18 @@ import { Clock, CheckCircle2, Loader2 } from 'lucide-react';
 import BookingStatusBadge from '../../../../components/BookingStatusBadge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { useConfirmBooking } from '../../shared/hooks/useStaffBookings';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { useConfirmBooking, useCompleteBooking } from '../../shared/hooks/useStaffBookings';
 import type { BookingDto } from '../../../../types/booking';
 
 interface ReceptionistCheckInCardProps {
@@ -11,9 +22,11 @@ interface ReceptionistCheckInCardProps {
 }
 
 export default function ReceptionistCheckInCard({ booking }: ReceptionistCheckInCardProps) {
-  const { mutate: confirm, isPending } = useConfirmBooking();
+  const { mutate: confirm, isPending: confirming } = useConfirmBooking();
+  const { mutate: complete, isPending: completing } = useCompleteBooking();
 
   const canCheckIn = booking.status === 'PENDING_PAYMENT';
+  const canComplete = booking.status === 'CONFIRMED';
 
   return (
     <Card className="border-border hover:shadow-low transition-shadow">
@@ -48,14 +61,45 @@ export default function ReceptionistCheckInCard({ booking }: ReceptionistCheckIn
           <Button
             size="sm"
             onClick={() => confirm(booking.bookingId)}
-            disabled={isPending}
+            disabled={confirming}
             className="shrink-0"
           >
-            {isPending
+            {confirming
               ? <><Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> Confirming…</>
               : <><CheckCircle2 className="h-3.5 w-3.5 mr-1.5" /> Check In</>
             }
           </Button>
+        ) : canComplete ? (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button size="sm" variant="default" className="bg-green-600 hover:bg-green-700 text-white shrink-0">
+                <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
+                Complete
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Complete Booking</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Mark this booking as completed? This confirms the customer has checked out and allows them to leave a review.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  disabled={completing}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    complete(booking.bookingId);
+                  }}
+                  className="bg-green-600 hover:bg-green-700"
+                >
+                  {completing && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
+                  Complete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         ) : (
           <span className="text-xs text-muted-foreground shrink-0 italic">
             {booking.status === 'CONFIRMED' ? 'Checked in' : booking.status.toLowerCase()}

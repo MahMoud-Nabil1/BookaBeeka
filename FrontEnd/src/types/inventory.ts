@@ -66,3 +66,25 @@ export interface UpdateRoomTypeRequest {
   customAttributes?: Record<string, unknown>;
   isActive?: boolean;
 }
+
+// ── Amenities ─────────────────────────────────────────────────────────────────
+
+export interface AmenityResponse {
+  id: string;
+  tenantId: string;
+  name: string;
+  icon?: string | null;
+  description?: string | null;
+}
+
+export interface CreateAmenityRequest {
+  name: string;
+  icon?: string;
+  description?: string;
+}
+
+export interface UpdateAmenityRequest {
+  name?: string;
+  icon?: string;
+  description?: string;
+}

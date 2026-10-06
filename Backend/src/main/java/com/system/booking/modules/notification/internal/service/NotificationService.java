@@ -67,17 +67,29 @@ public class NotificationService {
         String renderedContent = emailTemplateService.renderEmail(event.type(), model);
 
         // Step 2: Persist initial PENDING record in an independent transaction
-        Notification notification = savePendingNotification(event, renderedContent);
+        Notification notification = null;
+        try {
+            notification = savePendingNotification(event, renderedContent);
+        } catch (Exception ex) {
+            log.warn("Failed to persist pending notification for recipient [{}]: {}. Continuing with email dispatch.",
+                    event.recipientEmail(), ex.getMessage());
+        }
 
         // Step 3: Attempt email dispatch
         try {
             emailSenderService.sendEmail(event.recipientEmail(), event.subject(), renderedContent, true);
-            // Step 4a: Mark as SENT
-            return markAsSent(notification.getId());
+            // Step 4a: Mark as SENT if notification was persisted
+            if (notification != null && notification.getId() != null) {
+                return markAsSent(notification.getId());
+            }
+            return notification;
         } catch (Exception ex) {
-            log.error("Failed to deliver notification id=[{}]. Reason: {}", notification.getId(), ex.getMessage());
+            log.error("Failed to deliver notification to [{}]. Reason: {}", event.recipientEmail(), ex.getMessage());
             // Step 4b: Mark as FAILED for auditing and retry eligibility
-            return markAsFailed(notification.getId(), ex.getMessage());
+            if (notification != null && notification.getId() != null) {
+                return markAsFailed(notification.getId(), ex.getMessage());
+            }
+            return notification;
         }
     }
 
@@ -104,10 +116,23 @@ public class NotificationService {
      */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
     public Notification savePendingNotification(NotificationEvent event, String contentBody) {
-        Customer customerProxy = entityManager.getReference(Customer.class, event.customerId());
-        Booking bookingProxy = (event.bookingId() != null)
-                ? entityManager.getReference(Booking.class, event.bookingId())
-                : null;
+        Customer customerProxy = null;
+        if (event.customerId() != null) {
+            try {
+                customerProxy = entityManager.getReference(Customer.class, event.customerId());
+            } catch (Exception ex) {
+                log.debug("Could not resolve customer reference for customerId [{}]: {}", event.customerId(), ex.getMessage());
+            }
+        }
+
+        Booking bookingProxy = null;
+        if (event.bookingId() != null) {
+            try {
+                bookingProxy = entityManager.getReference(Booking.class, event.bookingId());
+            } catch (Exception ex) {
+                log.debug("Could not resolve booking reference for bookingId [{}]: {}", event.bookingId(), ex.getMessage());
+            }
+        }
 
         Notification notification = Notification.builder()
                 .tenantId(event.tenantId())

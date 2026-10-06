@@ -1,6 +1,7 @@
 package com.system.booking.modules.superAdmin.api;
 
 import com.system.booking.modules.superAdmin.api.dto.*;
+import com.system.booking.modules.inventory.internal.dto.response.ResourceResponse;
 import com.system.booking.modules.superAdmin.internal.service.SuperAdminService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -98,5 +100,12 @@ public class SuperAdminController {
             @RequestParam(defaultValue = "0")  int page,
             @RequestParam(defaultValue = "20") int size) {
         return ResponseEntity.ok(superAdminService.listCustomerWallets(PageRequest.of(page, size)));
+    }
+
+    // GET /api/admin/super/tenants/{tenantId}/rooms
+    @GetMapping("/tenants/{tenantId}/rooms")
+    public ResponseEntity<List<ResourceResponse>> listRoomsByTenant(
+            @PathVariable UUID tenantId) {
+        return ResponseEntity.ok(superAdminService.listRoomsByTenant(tenantId));
     }
 }

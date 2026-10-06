@@ -1,0 +1,4 @@
+### Test the availability search endpoint to see if it returns any rooms
+
+GET http://localhost:8081/api/availability/search?checkIn=2026-09-25&checkOut=2026-09-27&page=0&size=20
+Content-Type: application/json

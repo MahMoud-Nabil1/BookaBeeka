@@ -1,0 +1,17 @@
+### 1. Check if backend is running
+GET http://localhost:8081/actuator/health
+Accept: application/json
+
+###
+
+### 2. Try the search endpoint with simple params
+GET http://localhost:8081/api/availability/search?checkIn=2026-09-25&checkOut=2026-09-27
+Accept: application/json
+
+###
+
+### 3. Call the manual seed endpoint
+POST http://localhost:8081/api/dev/seed/all
+Content-Type: application/json
+
+###

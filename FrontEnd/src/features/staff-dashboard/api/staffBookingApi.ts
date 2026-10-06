@@ -37,4 +37,11 @@ export const staffBookingApi = {
     });
     return response.data;
   },
+
+  // POST /api/bookings/{bookingId}/complete
+  // Admin/Owner only — marks booking as COMPLETED after checkout date
+  completeBooking: async (bookingId: string): Promise<{ message: string; bookingId: string }> => {
+    const response = await api.post(`/api/bookings/${bookingId}/complete`);
+    return response.data;
+  },
 };

@@ -2,6 +2,8 @@ package com.system.booking.modules.booking.internal.exception;
 
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.persistence.OptimisticLockException;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -12,6 +14,7 @@ import java.util.Map;
 
 // maps booking exceptions to proper HTTP responses
 @RestControllerAdvice
+@Order(Ordered.HIGHEST_PRECEDENCE)
 public class BookingExceptionHandler {
 
     @ExceptionHandler(SlotUnavailableException.class)

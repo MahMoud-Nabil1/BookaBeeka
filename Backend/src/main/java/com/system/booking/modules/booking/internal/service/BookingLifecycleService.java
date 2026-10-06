@@ -70,17 +70,19 @@ public class BookingLifecycleService {
         booking.setCancellationReason(reason);
         bookingRepo.save(booking);
 
+        UUID resolvedTenantId = tenantId != null ? tenantId : booking.getTenantId();
+
         // free up the slot so others can book it
         if (booking.getLockId() != null) {
             try {
-                availabilityApi.releaseLock(tenantId, booking.getLockId());
+                availabilityApi.releaseLock(resolvedTenantId, booking.getLockId());
             } catch (Exception e) {
                 log.warn("Couldn't release lock {} for booking {}: {}", booking.getLockId(), bookingId, e.getMessage());
             }
         }
 
         eventPublisher.publishEvent(new BookingCancelledEvent(
-                booking.getId(), tenantId, refundAmount, reason));
+                booking.getId(), resolvedTenantId, refundAmount, reason));
 
         log.info("Booking {} cancelled, refund {}% ({})", bookingId, refundPercentage, refundAmount);
 
@@ -148,6 +150,10 @@ public class BookingLifecycleService {
     }
 
     private Booking findBooking(UUID tenantId, UUID bookingId) {
+        if (tenantId == null) {
+            return bookingRepo.findById(bookingId)
+                    .orElseThrow(() -> new EntityNotFoundException("Booking not found: " + bookingId));
+        }
         return bookingRepo.findByTenantIdAndId(tenantId, bookingId)
                 .orElseThrow(() -> new EntityNotFoundException("Booking not found: " + bookingId));
     }

@@ -1,0 +1,33 @@
+### Test API Endpoints for BookaBeeka
+
+### 1. Search Available Rooms (Public - No Auth Required)
+### This should return rooms if data has been seeded
+GET http://localhost:8081/api/availability/search?checkIn=2026-09-25&checkOut=2026-09-27
+Content-Type: application/json
+
+### 2. Register a New Owner/Hotel (Public - Creates Tenant + Owner)
+POST http://localhost:8081/api/v1/owner/register
+Content-Type: application/json
+
+{
+  "hotelName": "Test Hotel 2",
+  "subdomain": "testhotel2",
+  "firstName": "Jane",
+  "lastName": "Smith",
+  "email": "owner@testhotel2.com",
+  "password": "password123",
+  "phone": "+1234567890",
+  "currency": "USD",
+  "timezone": "America/New_York"
+}
+
+### 3. Register a Customer (Public - No Auth Required)
+POST http://localhost:8081/api/customers/register
+Content-Type: application/json
+
+{
+  "name": "Test Customer",
+  "email": "customer@test.com",
+  "password": "password123",
+  "phone": "+1234567890"
+}

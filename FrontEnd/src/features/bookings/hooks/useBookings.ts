@@ -5,7 +5,8 @@ import { selectTenantId, selectUserId } from '../../../redux/selectors/authSelec
 
 /**
  * Fetches all bookings for the currently authenticated customer.
- * tenantId is read from the JWT via Redux — customers only see their own bookings.
+ * If tenantId is available (from JWT), scopes by that tenant;
+ * otherwise returns bookings across all tenants (typical for customers).
  * The backend derives customerId from the JWT sub claim automatically.
  */
 export function useMyBookings() {
@@ -14,7 +15,7 @@ export function useMyBookings() {
 
   return useQuery({
     queryKey: ['bookings', 'mine', userId, tenantId],
-    queryFn: () => bookingApi.getMyBookings(tenantId!),
-    enabled: !!tenantId && !!userId,
+    queryFn: () => bookingApi.getMyBookings(tenantId),
+    enabled: !!userId,
   });
 }

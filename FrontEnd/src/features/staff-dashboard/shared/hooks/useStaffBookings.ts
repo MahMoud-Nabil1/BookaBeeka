@@ -49,3 +49,22 @@ export function useCancelBookingStaff() {
     onError: () => toast.error('Failed to cancel booking.'),
   });
 }
+
+/** Complete a specific booking (staff action - admin/owner only). */
+export function useCompleteBooking() {
+  const queryClient = useQueryClient();
+  const tenantId    = useAppSelector(selectTenantId);
+
+  return useMutation({
+    mutationFn: (bookingId: string) =>
+      staffBookingApi.completeBooking(bookingId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['staff', 'bookings', tenantId] });
+      toast.success('Booking marked as completed.');
+    },
+    onError: (error: any) => {
+      const message = error?.response?.data?.message || 'Failed to complete booking.';
+      toast.error(message);
+    },
+  });
+}

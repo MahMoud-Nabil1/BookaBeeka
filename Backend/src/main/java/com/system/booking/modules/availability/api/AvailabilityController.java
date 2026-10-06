@@ -85,6 +85,14 @@ public class AvailabilityController {
         }
     }
 
+    @GetMapping("/rooms/{id}")
+    public ResponseEntity<AvailableRoomResponse> getRoomDetails(
+            @PathVariable UUID id,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkIn,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkOut) {
+        return ResponseEntity.ok(availabilityModuleApi.getRoomDetails(id, checkIn, checkOut));
+    }
+
     // ── Room Block CRUD (admin, tenant from JWT) ─────────────────
 
     @PostMapping("/room-blocks")

@@ -24,3 +24,26 @@ export interface ExceptionDto {
   endTime: string;
   reason: string;
 }
+
+export interface RoomBlockResponse {
+  id: string;
+  tenantId: string;
+  roomId: string;
+  startDate: string; // ISO date
+  endDate: string; // ISO date
+  reason: string | null;
+  createdAt: string;
+}
+
+export interface CreateRoomBlockRequest {
+  roomId: string;
+  startDate: string;
+  endDate: string;
+  reason?: string;
+}
+
+export interface UpdateRoomBlockRequest {
+  startDate?: string;
+  endDate?: string;
+  reason?: string;
+}

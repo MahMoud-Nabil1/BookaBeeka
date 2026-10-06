@@ -4,11 +4,14 @@ import com.system.booking.modules.booking.internal.entity.Booking;
 import com.system.booking.modules.booking.internal.repository.BookingRepository;
 import com.system.booking.modules.booking.internal.service.BookingCreationService;
 import com.system.booking.modules.booking.internal.service.BookingLifecycleService;
+import com.system.booking.modules.inventory.api.InventoryModuleApi;
+import com.system.booking.modules.inventory.internal.dto.response.ResourceResponse;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
@@ -22,6 +25,7 @@ public class BookingModuleApiImpl implements BookingModuleApi {
     private final BookingCreationService creationService;
     private final BookingLifecycleService lifecycleService;
     private final BookingRepository bookingRepo;
+    private final InventoryModuleApi inventoryApi;
 
     @Override
     @Transactional
@@ -76,15 +80,21 @@ public class BookingModuleApiImpl implements BookingModuleApi {
 
     @Override
     public BookingStatusDto getBookingStatus(UUID tenantId, UUID bookingId) {
-        Booking booking = bookingRepo.findByTenantIdAndId(tenantId, bookingId)
-                .orElseThrow(() -> new EntityNotFoundException("Booking not found: " + bookingId));
+        Booking booking = (tenantId != null)
+                ? bookingRepo.findByTenantIdAndId(tenantId, bookingId)
+                        .orElseThrow(() -> new EntityNotFoundException("Booking not found: " + bookingId))
+                : bookingRepo.findById(bookingId)
+                        .orElseThrow(() -> new EntityNotFoundException("Booking not found: " + bookingId));
         return new BookingStatusDto(booking.getId(), booking.getStatus().name(), booking.getVersion());
     }
 
     @Override
     public BookingDto getBookingById(UUID tenantId, UUID bookingId) {
-        Booking booking = bookingRepo.findByTenantIdAndId(tenantId, bookingId)
-                .orElseThrow(() -> new EntityNotFoundException("Booking not found: " + bookingId));
+        Booking booking = (tenantId != null)
+                ? bookingRepo.findByTenantIdAndId(tenantId, bookingId)
+                        .orElseThrow(() -> new EntityNotFoundException("Booking not found: " + bookingId))
+                : bookingRepo.findById(bookingId)
+                        .orElseThrow(() -> new EntityNotFoundException("Booking not found: " + bookingId));
         return toDto(booking);
     }
 
@@ -96,18 +106,53 @@ public class BookingModuleApiImpl implements BookingModuleApi {
                 .toList();
     }
 
+    @Override
+    public List<BookingDto> listBookingsForCustomer(UUID customerId) {
+        return bookingRepo.findByCustomerId(customerId)
+                .stream()
+                .map(this::toDto)
+                .toList();
+    }
+
     // maps entity to DTO
     private BookingDto toDto(Booking b) {
+        String roomName = null;
+        String roomNumber = null;
+        String roomTypeName = null;
+
+        if (b.getTenantId() != null && b.getRoomId() != null) {
+            try {
+                ResourceResponse resource = inventoryApi.getResourceByTenantAndId(b.getTenantId(), b.getRoomId());
+                if (resource != null) {
+                    roomName = resource.name();
+                    roomNumber = resource.roomNumber();
+                    roomTypeName = resource.roomTypeName();
+                }
+            } catch (Exception ignored) {
+                // If resource cannot be resolved or is absent, leave metadata as null
+            }
+        }
+
         return new BookingDto(
-                b.getId(), b.getTenantId(), b.getCustomerId(), b.getRoomId(),
+                b.getId(),
+                b.getTenantId(),
+                b.getCustomerId(),
+                b.getRoomId(),
+                roomName,
+                roomNumber,
+                roomTypeName,
                 b.getServiceOfferingId(),
-                b.getStartTime(), b.getEndTime(),
-                b.getCheckIn(), b.getCheckOut(),
-                b.getNumberOfRooms(),
-                b.getStatus().name(),
-                b.getTotalAmount(), b.getCurrency(),
-                b.getSpecialRequests(), b.getCancellationReason(),
-                b.getVersion(),
+                b.getStartTime(),
+                b.getEndTime(),
+                b.getCheckIn(),
+                b.getCheckOut(),
+                b.getNumberOfRooms() != null ? b.getNumberOfRooms() : 1,
+                b.getStatus() != null ? b.getStatus().name() : "PENDING_PAYMENT",
+                b.getTotalAmount() != null ? b.getTotalAmount() : BigDecimal.ZERO,
+                b.getCurrency() != null ? b.getCurrency() : "USD",
+                b.getSpecialRequests(),
+                b.getCancellationReason(),
+                b.getVersion() != null ? b.getVersion() : 0,
                 b.getCreatedAt() != null ? b.getCreatedAt().atOffset(ZoneOffset.UTC) : null);
     }
 }

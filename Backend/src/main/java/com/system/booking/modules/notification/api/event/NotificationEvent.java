@@ -51,9 +51,8 @@ public record NotificationEvent(
         if (tenantId == null) {
             throw new IllegalArgumentException("tenantId must not be null for tenant-scoped notifications");
         }
-        if (customerId == null) {
-            throw new IllegalArgumentException("customerId must not be null");
-        }
+        // customerId may be null for platform-level notifications (e.g., SuperAdmin OTP/password reset)
+        // where the sender is not a Customer entity
         if (type == null) {
             throw new IllegalArgumentException("NotificationType must not be null");
         }

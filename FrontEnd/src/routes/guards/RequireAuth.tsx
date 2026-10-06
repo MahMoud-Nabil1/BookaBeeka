@@ -15,7 +15,7 @@ export default function RequireAuth({ children, allowedUserType }: RequireAuthPr
   if (!isAuthenticated) {
     // Redirect to the appropriate login page based on the attempted URL or allowedType
     if (allowedUserType === 'STAFF' || location.pathname.startsWith('/staff')) {
-      return <Navigate to="/login/staff" state={{ from: location }} replace />;
+      return <Navigate to="/login/owner" state={{ from: location }} replace />;
     }
     return <Navigate to="/login/customer" state={{ from: location }} replace />;
   }
@@ -25,7 +25,10 @@ export default function RequireAuth({ children, allowedUserType }: RequireAuthPr
     if (userType === 'STAFF') {
       return <Navigate to="/staff" replace />;
     }
-    return <Navigate to="/portal" replace />;
+    if (userType === 'CUSTOMER') {
+      return <Navigate to="/portal" replace />;
+    }
+    return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;

@@ -58,7 +58,16 @@ export default function CustomerLoginPage() {
                 name="password"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Password</FormLabel>
+                    <div className="flex items-center justify-between">
+                      <FormLabel>Password</FormLabel>
+                      <Link
+                        to="/forgot-password"
+                        className="text-xs text-muted-foreground hover:underline"
+                        tabIndex={-1}
+                      >
+                        Forgot password?
+                      </Link>
+                    </div>
                     <FormControl>
                       <Input type="password" placeholder="••••••••" {...field} />
                     </FormControl>
@@ -106,9 +115,15 @@ export default function CustomerLoginPage() {
         </CardContent>
         <CardFooter className="flex flex-col space-y-2 text-sm text-center border-t border-border pt-4">
           <div className="text-muted-foreground">
-            Staff member?{' '}
-            <Link to="/login/staff" className="hover:underline">
-              Staff Portal
+            Hotel owner?{' '}
+            <Link to="/login/owner" className="hover:underline text-primary">
+              Owner Portal
+            </Link>
+          </div>
+          <div className="text-muted-foreground">
+            Platform administrator?{' '}
+            <Link to="/login/superadmin" className="hover:underline text-primary">
+              SuperAdmin Portal
             </Link>
           </div>
         </CardFooter>

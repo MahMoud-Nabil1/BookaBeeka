@@ -309,8 +309,16 @@ public class WalletPaymentService {
     private CustomerWallet findWalletWithLock(UUID customerId) {
         return customerWalletRepository
                 .findByCustomerIdWithLock(customerId)
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "Wallet not found for customer: " + customerId));
+                .orElseGet(() -> {
+                    // Auto-create the wallet with zero balance so the customer
+                    // gets a proper 402 Insufficient Balance instead of a 404.
+                    log.info("Auto-creating empty wallet for customer [{}] during payment", customerId);
+                    return customerWalletRepository.save(CustomerWallet.builder()
+                            .customer(entityManager.getReference(Customer.class, customerId))
+                            .balance(BigDecimal.ZERO)
+                            .currency(defaultWalletCurrency)
+                            .build());
+                });
     }
 
     private Booking buildBookingRef(UUID bookingId) {

@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { ChevronLeft, CalendarDays, Clock, CreditCard, Loader2, AlertCircle, PenLine, BedDouble } from 'lucide-react';
 import { format } from 'date-fns';
-import { ChevronLeft, CalendarDays, Clock, CreditCard, Loader2, AlertCircle } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { bookingApi } from '../api/bookingApi';
 import { useCancelBooking } from '../hooks/useCancelBooking';
+import { AddReviewModal } from '../../reviews';
 import BookingStatusBadge from '../../../components/BookingStatusBadge';
 import { useAppSelector } from '../../../redux/hooks';
 import { selectTenantId } from '../../../redux/selectors/authSelectors';
@@ -27,17 +28,37 @@ export default function BookingDetailPage() {
 
   const [reason, setReason] = useState('');
   const [open, setOpen] = useState(false);
+  const [reviewOpen, setReviewOpen] = useState(false);
 
-  // Fetch status (lightweight — has bookingId, status, version)
-  const { data: statusData, isLoading, isError } = useQuery({
-    queryKey: ['booking', 'status', bookingId, tenantId],
-    queryFn: () => bookingApi.getBookingStatus(bookingId!, tenantId!),
-    enabled: !!bookingId && !!tenantId,
+  // Fetch full booking details (uses /api/bookings/{bookingId}, with fallback to getMyBookings)
+  const { data: booking, isLoading, isError } = useQuery({
+    queryKey: ['booking-detail', bookingId, tenantId],
+    queryFn: async () => {
+      try {
+        return await bookingApi.getBooking(bookingId!, tenantId);
+      } catch {
+        const list = await bookingApi.getMyBookings(tenantId);
+        const found = list.find((b) => b.bookingId === bookingId);
+        if (!found) throw new Error('Booking not found');
+        return found;
+      }
+    },
+    enabled: !!bookingId,
   });
+
+  const now = new Date();
+  const stayStarted = booking ? new Date(booking.startTime) < now : false;
+  const canReview =
+    booking?.status === 'COMPLETED' ||
+    (booking?.status === 'CONFIRMED' && stayStarted);
 
   const handleCancel = () => {
     cancel(
-      { bookingId: bookingId!, reason: reason || undefined },
+      {
+        bookingId: bookingId!,
+        tenantId: booking?.tenantId || tenantId || undefined,
+        reason: reason || undefined,
+      },
       {
         onSuccess: () => {
           setOpen(false);
@@ -58,7 +79,7 @@ export default function BookingDetailPage() {
     );
   }
 
-  if (isError || !statusData) {
+  if (isError || !booking) {
     return (
       <PageLayout>
         <div className="flex flex-col items-center justify-center py-20 text-center">
@@ -73,7 +94,7 @@ export default function BookingDetailPage() {
     );
   }
 
-  const canCancel = statusData.status === 'PENDING_PAYMENT' || statusData.status === 'CONFIRMED';
+  const canCancel = booking.status === 'PENDING_PAYMENT' || booking.status === 'CONFIRMED';
 
   return (
     <PageLayout
@@ -91,10 +112,10 @@ export default function BookingDetailPage() {
           <div>
             <h1 className="text-2xl font-bold text-foreground">Booking Details</h1>
             <p className="text-sm text-muted-foreground font-mono mt-1">
-              Ref: {statusData.bookingId}
+              Ref: {booking.bookingId}
             </p>
           </div>
-          <BookingStatusBadge status={statusData.status} />
+          <BookingStatusBadge status={booking.status} />
         </div>
 
         {/* Info Card */}
@@ -110,28 +131,107 @@ export default function BookingDetailPage() {
               <span className="text-muted-foreground flex items-center gap-2">
                 <Clock className="h-4 w-4" /> Booking ID
               </span>
-              <span className="font-mono text-foreground">{statusData.bookingId.substring(0, 16)}…</span>
+              <span className="font-mono text-foreground">{booking.bookingId.substring(0, 16)}…</span>
             </div>
+
+            <Separator />
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground flex items-center gap-2">
+                <BedDouble className="h-4 w-4" /> Room
+              </span>
+              <span className="text-foreground font-medium text-right">
+                {booking.roomName ? (
+                  <span>
+                    <span>{booking.roomName}</span>
+                    {booking.roomNumber && (
+                      <span className="text-muted-foreground ml-1.5 font-normal">
+                        · Room {booking.roomNumber}
+                      </span>
+                    )}
+                  </span>
+                ) : booking.roomNumber ? (
+                  <span>Room {booking.roomNumber}</span>
+                ) : (
+                  <span className="font-mono text-xs text-muted-foreground">
+                    {booking.roomId ? `${booking.roomId.substring(0, 8)}…` : '—'}
+                  </span>
+                )}
+              </span>
+            </div>
+
+            {booking.roomTypeName && (
+              <>
+                <Separator />
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Room Type</span>
+                  <span className="text-foreground font-medium">{booking.roomTypeName}</span>
+                </div>
+              </>
+            )}
+
+            <Separator />
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground flex items-center gap-2">
+                <CalendarDays className="h-4 w-4" /> Check-in
+              </span>
+              <span className="text-foreground font-medium">
+                {booking.checkInDate || (booking.startTime ? format(new Date(booking.startTime), 'EEE, MMM d, yyyy') : '—')}
+              </span>
+            </div>
+
+            <Separator />
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground flex items-center gap-2">
+                <CalendarDays className="h-4 w-4" /> Check-out
+              </span>
+              <span className="text-foreground font-medium">
+                {booking.checkOutDate || (booking.endTime ? format(new Date(booking.endTime), 'EEE, MMM d, yyyy') : '—')}
+              </span>
+            </div>
+
+            <Separator />
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground flex items-center gap-2">
+                <CreditCard className="h-4 w-4" /> Total Price
+              </span>
+              <span className="text-foreground font-bold">
+                {booking.totalAmount > 0
+                  ? `${booking.currency} ${booking.totalAmount.toFixed(2)}`
+                  : 'Free'}
+              </span>
+            </div>
+
             <Separator />
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground flex items-center gap-2">
                 <CreditCard className="h-4 w-4" /> Status
               </span>
-              <BookingStatusBadge status={statusData.status} />
+              <BookingStatusBadge status={booking.status} />
             </div>
+
             <Separator />
             <div className="flex items-center justify-between">
               <span className="text-muted-foreground">Version</span>
-              <span className="text-foreground">{statusData.version}</span>
+              <span className="text-foreground">{booking.version}</span>
             </div>
           </CardContent>
         </Card>
 
         {/* Actions */}
-        <div className="flex gap-3">
+        <div className="flex gap-3 flex-wrap">
           <Button variant="outline" asChild className="flex-1">
             <Link to="/portal/rooms">Book Another Room</Link>
           </Button>
+
+          {canReview && (
+            <Button
+              className="flex-1 gap-2 shadow-low"
+              onClick={() => setReviewOpen(true)}
+            >
+              <PenLine className="h-4 w-4" />
+              Rate Stay
+            </Button>
+          )}
 
           {canCancel && (
             <Dialog open={open} onOpenChange={setOpen}>
@@ -168,6 +268,14 @@ export default function BookingDetailPage() {
             </Dialog>
           )}
         </div>
+
+        <AddReviewModal
+          open={reviewOpen}
+          onOpenChange={setReviewOpen}
+          serviceId={booking.roomId}
+          tenantId={booking.tenantId || tenantId || ''}
+          preselectedBookingId={bookingId}
+        />
       </div>
     </PageLayout>
   );

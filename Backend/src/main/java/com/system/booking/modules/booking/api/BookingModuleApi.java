@@ -22,4 +22,6 @@ public interface BookingModuleApi {
     BookingDto getBookingById(UUID tenantId, UUID bookingId);
 
     List<BookingDto> listBookingsForCustomer(UUID tenantId, UUID customerId);
+
+    List<BookingDto> listBookingsForCustomer(UUID customerId);
 }

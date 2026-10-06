@@ -21,6 +21,12 @@ public interface ReviewRepository extends JpaRepository<Review, UUID> {
     // public-facing listing for a given service within a tenant
     Page<Review> findByTenantIdAndServiceId(UUID tenantId, UUID serviceId, Pageable pageable);
 
+    // room-based listing for customer-facing page — reviews where room_id matches
+    Page<Review> findByTenantIdAndRoomId(UUID tenantId, UUID roomId, Pageable pageable);
+
+    // fallback: all reviews for this room across any tenant (for catalog page)
+    Page<Review> findByRoomId(UUID roomId, Pageable pageable);
+
     // admin/owner dashboard — all reviews for their hotel; also used by SUPER_ADMIN with an explicit tenantId
     Page<Review> findByTenantId(UUID tenantId, Pageable pageable);
 

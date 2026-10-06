@@ -15,7 +15,7 @@ export default function RequireAuth({ children, allowedUserType }: RequireAuthPr
   if (!isAuthenticated) {
     // Redirect to the appropriate login page based on the attempted URL or allowedType
     if (allowedUserType === 'STAFF' || location.pathname.startsWith('/staff')) {
-      return <Navigate to="/login/staff" state={{ from: location }} replace />;
+      return <Navigate to="/login/owner" state={{ from: location }} replace />;
     }
     return <Navigate to="/login/customer" state={{ from: location }} replace />;
   }

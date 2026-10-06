@@ -71,4 +71,21 @@ public class CustomerController {
         CustomerProfileResponse updatedProfile = customerService.updateCustomerProfile(customerId, request);
         return ResponseEntity.ok(updatedProfile);
     }
+
+    /**
+     * Change the authenticated customer's password.
+     *
+     * <p><b>Access:</b> Authenticated CUSTOMER users only.</p>
+     *
+     * @param request the validated change password request containing current and new password
+     * @return 200 OK with success message
+     */
+    @PutMapping("/change-password")
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public ResponseEntity<java.util.Map<String, String>> changePassword(
+            @Valid @RequestBody com.system.booking.modules.customer.internal.dto.CustomerChangePasswordRequest request) {
+        UUID customerId = SecurityUtil.getCurrentCustomerPrincipal().id();
+        customerService.changePassword(customerId, request);
+        return ResponseEntity.ok(java.util.Map.of("message", "Password changed successfully"));
+    }
 }

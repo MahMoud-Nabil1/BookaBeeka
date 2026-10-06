@@ -24,15 +24,21 @@ export interface BookingConfirmationDto {
   createdAt: string;
 }
 
-// Full booking read — GET /api/bookings/mine, GET /api/bookings/{id}/status
+// Full booking read — GET /api/bookings/mine, GET /api/bookings/{id}
 export interface BookingDto {
   bookingId: string;
   tenantId: string;
   customerId: string;
   roomId: string;              // Maps to backend: resourceId
+  roomName?: string;
+  roomNumber?: string;
+  roomTypeName?: string;
   roomTypeId: string;          // Maps to backend: serviceOfferingId
   startTime: string;           // Check-in time
   endTime: string;             // Check-out time
+  checkInDate?: string;
+  checkOutDate?: string;
+  numberOfRooms?: number;
   status: BookingStatus;
   totalAmount: number;
   currency: string;

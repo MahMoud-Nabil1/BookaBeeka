@@ -65,16 +65,23 @@ export default function AddReviewModal({
     enabled: isCustomer && open,
   });
 
-  // Filter completed bookings
-  const completedBookings =
-    myBookings?.filter((b) => b.status === 'COMPLETED') || [];
+  // Filter bookings that are eligible for review:
+  // - status is COMPLETED, OR
+  // - status is CONFIRMED and the guest has already checked in (startTime passed)
+  const now = new Date();
+  const eligibleByStatus =
+    myBookings?.filter(
+      (b) =>
+        b.status === 'COMPLETED' ||
+        (b.status === 'CONFIRMED' && new Date(b.startTime) < now)
+    ) || [];
 
-  // Match bookings specifically for this room/service if possible, or any completed booking for the tenant
-  const eligibleRoomBookings = completedBookings.filter(
+  // Match bookings specifically for this room/service if possible, or any eligible booking for the tenant
+  const eligibleRoomBookings = eligibleByStatus.filter(
     (b) => b.roomId === serviceId || !b.roomId
   );
   const eligibleBookings =
-    eligibleRoomBookings.length > 0 ? eligibleRoomBookings : completedBookings;
+    eligibleRoomBookings.length > 0 ? eligibleRoomBookings : eligibleByStatus;
 
   useEffect(() => {
     if (preselectedBookingId) {
@@ -88,10 +95,12 @@ export default function AddReviewModal({
     e.preventDefault();
     if (!selectedBookingId) return;
 
+    const targetBooking = myBookings?.find((b) => b.bookingId === selectedBookingId);
+    const effectiveTenantId = targetBooking?.tenantId || tenantId;
+
     submitReview(
       {
-        tenantId,
-        serviceId,
+        tenantId: effectiveTenantId,
         bookingId: selectedBookingId,
         rating,
         comment: comment.trim() || undefined,
@@ -153,7 +162,7 @@ export default function AddReviewModal({
             <div className="space-y-1">
               <h3 className="font-semibold text-base">Verified Stays Only</h3>
               <p className="text-sm text-muted-foreground max-w-sm mx-auto leading-relaxed">
-                Only guests who have completed a stay can review this accommodation. If you have an active reservation, you can review as soon as your stay completes!
+                Only guests who have completed a stay can review this accommodation. You'll be able to rate your stay as soon as your check-out time passes!
               </p>
             </div>
             <div className="pt-2 flex justify-center gap-3">
@@ -184,7 +193,8 @@ export default function AddReviewModal({
                   <SelectContent>
                     {eligibleBookings.map((b) => (
                       <SelectItem key={b.bookingId} value={b.bookingId}>
-                        Booking Ref: {b.bookingId.substring(0, 8)}... (Completed)
+                        Booking Ref: {b.bookingId.substring(0, 8)}...{' '}
+                        ({b.status === 'COMPLETED' ? 'Completed' : 'Stay Ended'})
                       </SelectItem>
                     ))}
                   </SelectContent>

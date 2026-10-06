@@ -4,8 +4,11 @@ import com.system.booking.modules.payment.internal.exception.InsufficientBalance
 import jakarta.persistence.EntityNotFoundException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.core.Ordered;
+import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -33,6 +36,7 @@ import java.util.Map;
  * </p>
  */
 @RestControllerAdvice
+@Order(Ordered.LOWEST_PRECEDENCE)
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
@@ -138,6 +142,32 @@ public class GlobalExceptionHandler {
     }
 
     // -------------------------------------------------------------------------
+    // 403 Forbidden — access denied
+    // -------------------------------------------------------------------------
+
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<Map<String, Object>> handleAccessDenied(AccessDeniedException ex) {
+        return buildResponse(
+                HttpStatus.FORBIDDEN,
+                "Access denied",
+                ex.getMessage()
+        );
+    }
+
+    // -------------------------------------------------------------------------
+    // 400 Bad Request — illegal state
+    // -------------------------------------------------------------------------
+
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<Map<String, Object>> handleIllegalState(IllegalStateException ex) {
+        return buildResponse(
+                HttpStatus.BAD_REQUEST,
+                "Invalid request state",
+                ex.getMessage()
+        );
+    }
+
+    // -------------------------------------------------------------------------
     // 500 Internal Server Error — unexpected failures
     // -------------------------------------------------------------------------
 
@@ -148,11 +178,13 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<Map<String, Object>> handleGenericException(Exception ex) {
         log.error("Unhandled exception [{}]: {}", ex.getClass().getSimpleName(), ex.getMessage(), ex);
-        // TODO: remove debug details before production
+        String message = (ex.getMessage() != null && !ex.getMessage().isBlank())
+                ? ex.getMessage()
+                : (ex.getCause() != null && ex.getCause().getMessage() != null ? ex.getCause().getMessage() : "No further cause");
         return buildResponse(
                 HttpStatus.INTERNAL_SERVER_ERROR,
-                ex.getClass().getSimpleName() + ": " + ex.getMessage(),
-                ex.getCause() != null ? ex.getCause().getMessage() : "No further cause"
+                ex.getClass().getSimpleName(),
+                message
         );
     }
 

@@ -28,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -121,17 +122,19 @@ public class PaymentHistoryService {
      */
     @Transactional(readOnly = true)
     public TenantBalanceResponse getTenantBalance(UUID tenantId) {
-        TenantWallet wallet = tenantWalletRepository.findByTenantId(tenantId)
-                .orElseThrow(() -> new EntityNotFoundException(
-                        "No revenue wallet for tenant: " + tenantId +
-                        ". Auto-created on first completed payment."));
-
-        return new TenantBalanceResponse(
-                wallet.getId(),
-                wallet.getTenant().getId(),
-                wallet.getBalance(),
-                wallet.getCurrency(),
-                wallet.getUpdatedAt());
+        return tenantWalletRepository.findByTenantId(tenantId)
+                .map(wallet -> new TenantBalanceResponse(
+                        wallet.getId(),
+                        wallet.getTenant().getId(),
+                        wallet.getBalance(),
+                        wallet.getCurrency(),
+                        wallet.getUpdatedAt()))
+                .orElse(new TenantBalanceResponse(
+                        null,
+                        tenantId,
+                        BigDecimal.ZERO,
+                        "USD",
+                        LocalDateTime.now()));
     }
 
     // -------------------------------------------------------------------------

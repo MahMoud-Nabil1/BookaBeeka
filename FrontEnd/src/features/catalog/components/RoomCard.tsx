@@ -3,6 +3,7 @@ import { Users, Bed, ArrowRight, Star } from 'lucide-react';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { getAmenityIcon } from './AmenitiesFilter';
 import type { RoomResponse } from '../../../types/inventory';
 import type { RoomTypeResponse } from '../../../types/inventory';
 
@@ -12,6 +13,8 @@ interface ExtendedRoom extends RoomResponse {
   hotelName?: string;
   bedType?: string;
   image?: string;
+  amenities?: string[];
+  rating?: number;
 }
 
 interface RoomCardProps {
@@ -50,6 +53,14 @@ export default function RoomCard({ room, roomType }: RoomCardProps) {
     ? room.name
     : (room.roomCategory ? `${room.roomCategory.charAt(0).toUpperCase() + room.roomCategory.slice(1).toLowerCase()} Room` : 'Standard Room');
 
+  const rating = room.specs?.rating
+    ? Number(room.specs.rating)
+    : (room.rating ? Number(room.rating) : null);
+
+  const amenities = Array.isArray(room.amenities)
+    ? room.amenities
+    : (Array.isArray(room.specs?.amenities) ? room.specs.amenities : []);
+
   return (
     <Card className="overflow-hidden flex flex-col group border-border hover:shadow-raised transition-shadow duration-300">
       {/* Room Image Banner */}
@@ -72,14 +83,20 @@ export default function RoomCard({ room, roomType }: RoomCardProps) {
       <CardHeader className="pb-2">
         <div className="flex items-center justify-between gap-2">
           <CardTitle className="text-lg line-clamp-1">{roomName}</CardTitle>
-          <div className="flex items-center gap-1 text-xs font-semibold text-amber-500 shrink-0 bg-amber-500/10 px-2 py-0.5 rounded-full">
-            <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
-            <span>{room.specs?.rating ? Number(room.specs.rating).toFixed(1) : '4.9'}</span>
-          </div>
+          {typeof rating === 'number' && rating > 0 && !isNaN(rating) ? (
+            <div className="flex items-center gap-1 text-xs font-semibold text-amber-500 shrink-0 bg-amber-500/10 px-2 py-0.5 rounded-full">
+              <Star className="h-3 w-3 fill-amber-400 text-amber-400" />
+              <span>{rating.toFixed(1)}</span>
+            </div>
+          ) : (
+            <Badge variant="outline" className="text-[11px] font-normal px-2 py-0.5 text-muted-foreground border-border/60">
+              New
+            </Badge>
+          )}
         </div>
       </CardHeader>
 
-      <CardContent className="pb-4 flex-1 space-y-2 text-sm text-muted-foreground">
+      <CardContent className="pb-4 flex-1 space-y-2.5 text-sm text-muted-foreground">
         {room.capacity > 0 && (
           <div className="flex items-center gap-2">
             <Users className="h-4 w-4 shrink-0 text-primary" />
@@ -97,6 +114,33 @@ export default function RoomCard({ room, roomType }: RoomCardProps) {
             <span>{roomType.name}</span>
           </div>
         ) : null}
+
+        {/* What comes with the room */}
+        {amenities.length > 0 && (
+          <div className="pt-2 flex flex-wrap gap-1.5 border-t border-border/50">
+            {amenities.slice(0, 3).map((amenity: any, idx: number) => {
+              const name = typeof amenity === 'string' ? amenity : amenity.name || String(amenity);
+              return (
+                <Badge
+                  key={idx}
+                  variant="outline"
+                  className="text-[11px] font-normal px-2 py-0.5 bg-muted/40 text-muted-foreground border-border/60 flex items-center gap-1 rounded-md"
+                >
+                  {getAmenityIcon(name, 'h-3 w-3 text-primary/80')}
+                  <span className="line-clamp-1">{name}</span>
+                </Badge>
+              );
+            })}
+            {amenities.length > 3 && (
+              <Badge
+                variant="secondary"
+                className="text-[10px] font-medium px-1.5 py-0.5 rounded-md text-muted-foreground"
+              >
+                +{amenities.length - 3} more
+              </Badge>
+            )}
+          </div>
+        )}
       </CardContent>
 
       <CardFooter className="pt-0 border-t border-border flex items-center justify-between p-4 mt-auto">

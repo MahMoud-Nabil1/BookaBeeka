@@ -120,4 +120,28 @@ public class CustomerService {
                 .updatedAt(updatedCustomer.getUpdatedAt())
                 .build();
     }
+
+    /**
+     * Changes the authenticated customer's password.
+     *
+     * @param customerId the UUID of the customer
+     * @param request the validated change password request containing current and new password
+     * @throws IllegalArgumentException if customer not found, current password incorrect, or new password same as current
+     */
+    @Transactional
+    public void changePassword(UUID customerId, com.system.booking.modules.customer.internal.dto.CustomerChangePasswordRequest request) {
+        Customer customer = customerRepository.findById(customerId)
+                .orElseThrow(() -> new IllegalArgumentException("Customer not found"));
+
+        if (!passwordEncoder.matches(request.currentPassword(), customer.getPasswordHash())) {
+            throw new IllegalArgumentException("Current password is incorrect");
+        }
+
+        if (passwordEncoder.matches(request.newPassword(), customer.getPasswordHash())) {
+            throw new IllegalArgumentException("New password cannot be the same as your current password");
+        }
+
+        customer.setPasswordHash(passwordEncoder.encode(request.newPassword()));
+        customerRepository.save(customer);
+    }
 }

@@ -61,7 +61,7 @@ public class EmailSenderService {
      */
     public void sendEmail(String to, String subject, String body, boolean isHtml) {
         if (!mailEnabled) {
-            log.info("[MOCK_EMAIL] Email delivery is disabled. To: [{}], Subject: [{}]", to, subject);
+            log.info("[MOCK_EMAIL] Email delivery is disabled. To: [{}], Subject: [{}], Body: [{}]", to, subject, body);
             return;
         }
 
@@ -75,7 +75,8 @@ public class EmailSenderService {
                     StandardCharsets.UTF_8.name()
             );
 
-            helper.setFrom(fromAddress);
+            String sender = (fromAddress != null && !fromAddress.trim().isEmpty()) ? fromAddress.trim() : "no-reply@bookabeeka.com";
+            helper.setFrom(sender);
             helper.setTo(to);
             helper.setSubject(subject);
             helper.setText(body, isHtml);

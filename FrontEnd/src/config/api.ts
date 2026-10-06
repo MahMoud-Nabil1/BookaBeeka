@@ -27,7 +27,7 @@ api.interceptors.response.use(
       
       // Redirect to correct login page based on previous user type
       if (userType === 'STAFF') {
-        window.location.href = '/login/staff';
+        window.location.href = '/login/owner';
       } else {
         window.location.href = '/login/customer';
       }

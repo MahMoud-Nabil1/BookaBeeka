@@ -1,0 +1,17 @@
+### Test Owner/Admin Login Endpoint
+POST http://localhost:8081/api/auth/owner/login
+Content-Type: application/json
+
+{
+  "email": "your-email@example.com",
+  "password": "your-password"
+}
+
+### Test with a different email (if you have multiple accounts)
+POST http://localhost:8081/api/auth/owner/login
+Content-Type: application/json
+
+{
+  "email": "admin@example.com",
+  "password": "password123"
+}

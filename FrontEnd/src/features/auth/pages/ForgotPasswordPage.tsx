@@ -88,8 +88,8 @@ export default function ForgotPasswordPage() {
             Customer login
           </Link>
           <span>·</span>
-          <Link to="/login/staff" className="hover:underline">
-            Staff login
+          <Link to="/login/owner" className="hover:underline">
+            Owner login
           </Link>
         </CardFooter>
       </Card>

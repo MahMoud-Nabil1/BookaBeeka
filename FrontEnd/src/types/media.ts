@@ -1,12 +1,30 @@
-// Media module — REST endpoints not yet exposed by backend.
-// Types defined here for future use.
+// Media module types for photo management with Cloudinary integration
 
-export interface MediaPhoto {
+export interface MediaPhotoResponse {
   id: string;
   tenantId: string;
-  entityType: string;   // e.g., 'ROOM' | 'ROOM_TYPE' (backend uses 'RESOURCE' | 'SERVICE')
-  entityId: string;
+  resourceId: string;
   url: string;
+  publicId: string;  // Cloudinary public ID
   isPrimary: boolean;
-  displayOrder: number;
+  sortOrder: number;
+  createdAt: string;
+}
+
+export interface AttachPhotoRequest {
+  url: string;
+  publicId: string;
+  isPrimary?: boolean;
+}
+
+export interface UploadSignatureResponse {
+  signature: string;
+  timestamp: number;
+  cloudName: string;
+  apiKey: string;
+  folder: string;
+}
+
+export interface ReorderPhotosRequest {
+  photoIds: string[];  // Ordered list of photo IDs
 }

@@ -23,6 +23,21 @@ export const reviewApi = {
   },
 
   /**
+   * Fetch reviews for a specific room (resource) — the canonical query for the room detail page
+   */
+  getReviewsForRoom: async (
+    roomId: string,
+    tenantId: string,
+    page = 0,
+    size = 20
+  ): Promise<PageResponse<ReviewDto>> => {
+    const response = await api.get<PageResponse<ReviewDto>>(`/api/reviews/room/${roomId}`, {
+      params: { tenantId, page, size },
+    });
+    return response.data;
+  },
+
+  /**
    * Fetch reviews created by the authenticated customer
    */
   getMyReviews: async (page = 0, size = 20): Promise<PageResponse<ReviewDto>> => {

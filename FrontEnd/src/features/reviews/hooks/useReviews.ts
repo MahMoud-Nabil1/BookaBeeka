@@ -32,6 +32,23 @@ export function useMyReviews(page = 0, size = 10) {
 }
 
 /**
+ * Fetch reviews for a specific room (resource) — preferred for the room detail page
+ */
+export function useRoomReviews(
+  roomId?: string,
+  tenantId?: string,
+  page = 0,
+  size = 10
+) {
+  return useQuery({
+    queryKey: ['room-reviews', roomId, tenantId, page, size],
+    queryFn: () => reviewApi.getReviewsForRoom(roomId!, tenantId!, page, size),
+    enabled: Boolean(roomId && tenantId),
+    staleTime: 1000 * 60 * 3, // 3 minutes
+  });
+}
+
+/**
  * Hook to submit a new review on a completed booking
  */
 export function useCreateReview() {
@@ -39,19 +56,21 @@ export function useCreateReview() {
 
   return useMutation({
     mutationFn: (request: CreateReviewRequest) => reviewApi.createReview(request),
-    onSuccess: (_, variables) => {
+    onSuccess: (_data, _variables) => {
       toast.success('Review submitted successfully!', {
         description: 'Thank you for sharing your feedback.',
       });
-      // Invalidate relevant queries so UI refreshes immediately
-      queryClient.invalidateQueries({ queryKey: ['reviews', variables.serviceId] });
+      // Invalidate both service-based and room-based queries so the new review appears immediately
+      queryClient.invalidateQueries({ queryKey: ['reviews'] });
+      queryClient.invalidateQueries({ queryKey: ['room-reviews'] });
       queryClient.invalidateQueries({ queryKey: ['my-reviews'] });
     },
     onError: (error: any) => {
+      const responseData = error.response?.data;
       const message =
-        error.response?.data?.message ||
-        error.response?.data?.error ||
-        'Failed to submit review. Only completed stays can be reviewed once.';
+        (responseData?.message && responseData.message !== 'No further cause')
+          ? responseData.message
+          : (responseData?.error || 'Failed to submit review. Only completed stays can be reviewed once.');
       toast.error('Unable to submit review', {
         description: message,
       });

@@ -10,11 +10,12 @@ import type { CreateBookingRequestDto } from '../../../types/booking';
 /**
  * Orchestrates the 3-step atomic booking flow for hotel rooms:
  *   1. POST /api/bookings             → creates booking (PENDING_PAYMENT) + reserves room slot
- *   2. POST /api/payments/wallet/checkout → deducts wallet, returns PaymentResponse
- *   3. POST /api/bookings/{id}/confirm    → transitions booking to CONFIRMED
+ *   2. POST /api/payments/wallet/checkout → deducts wallet, confirms booking internally
+ *   3. On checkout failure: POST /api/bookings/{id}/cancel to roll back
  *
- * On any step failure the partial state is left for the backend TTL / lock expiry
- * to clean up (the slot lock has its own expiry window).
+ * The backend's WalletPaymentService.processPayment handles the payment deduction
+ * and booking confirmation (PENDING_PAYMENT → CONFIRMED) atomically. If payment
+ * fails, we explicitly cancel the booking to release the room slot.
  */
 export function useCreateBooking() {
   const queryClient = useQueryClient();
@@ -23,21 +24,34 @@ export function useCreateBooking() {
 
   return useMutation({
     mutationFn: async (req: CreateBookingRequestDto) => {
-      // Step 1 — create booking
-      const confirmation = await bookingApi.createBooking(req);
+      let bookingId: string | null = null;
 
-      // Step 2 — wallet checkout
-      // The backend's WalletPaymentService.processPayment already confirms the
-      // booking internally (PENDING_PAYMENT → CONFIRMED), so no separate Step 3
-      // confirm call is needed.
-      await paymentApi.checkout({
-        bookingId:     confirmation.bookingId,
-        customerId:    customerId!,
-        tenantId:      req.tenantId,
-        paymentAmount: req.paymentAmount && req.paymentAmount > 0 ? req.paymentAmount : 150,
-      });
+      try {
+        // Step 1 — create booking (PENDING_PAYMENT)
+        const confirmation = await bookingApi.createBooking(req);
+        bookingId = confirmation.bookingId;
 
-      return confirmation;
+        // Step 2 — wallet checkout (deducts wallet + confirms booking internally)
+        await paymentApi.checkout({
+          bookingId:     confirmation.bookingId,
+          customerId:    customerId!,
+          tenantId:      req.tenantId,
+          paymentAmount: req.paymentAmount && req.paymentAmount > 0 ? req.paymentAmount : 150,
+        });
+
+        return confirmation;
+      } catch (error) {
+        // Step 3 — rollback on checkout failure
+        if (bookingId) {
+          try {
+            await bookingApi.cancelBooking(bookingId, req.tenantId, 'Payment failed');
+          } catch (cancelError) {
+            console.error('Failed to cancel booking after payment failure:', cancelError);
+            // Continue to throw the original payment error
+          }
+        }
+        throw error;
+      }
     },
     onSuccess: () => {
       // Refresh bookings list and wallet balance

@@ -27,6 +27,14 @@ function BookingRow({ booking }: { booking: BookingDto }) {
 
   const canCancel = (CANCELLABLE_STATUSES as readonly string[]).includes(booking.status);
 
+  const now = new Date();
+  const stayStarted = new Date(booking.startTime) < now;
+  // Show "Rate Stay" once the guest has checked in (startTime passed) —
+  // covers both officially COMPLETED bookings and CONFIRMED ones mid-stay or after checkout.
+  const canReview =
+    booking.status === 'COMPLETED' ||
+    (booking.status === 'CONFIRMED' && stayStarted);
+
   const handleCancel = () => {
     cancel(
       { bookingId: booking.bookingId, tenantId: booking.tenantId, reason: reason || undefined },
@@ -44,6 +52,11 @@ function BookingRow({ booking }: { booking: BookingDto }) {
               <span className="text-xs text-muted-foreground font-mono">
                 #{booking.bookingId.substring(0, 8)}
               </span>
+              {(booking.roomName || booking.roomNumber) && (
+                <span className="text-xs font-medium text-foreground bg-muted px-2 py-0.5 rounded">
+                  {booking.roomName || ''}{booking.roomNumber ? (booking.roomName ? ` · Room ${booking.roomNumber}` : `Room ${booking.roomNumber}`) : ''}
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-2 text-sm text-muted-foreground mt-2">
               <CalendarDays className="h-4 w-4 shrink-0" />
@@ -72,7 +85,7 @@ function BookingRow({ booking }: { booking: BookingDto }) {
               </Link>
             </Button>
 
-            {booking.status === 'COMPLETED' && (
+            {canReview && (
               <Button
                 variant="outline"
                 size="sm"
@@ -80,7 +93,7 @@ function BookingRow({ booking }: { booking: BookingDto }) {
                 onClick={() => setReviewOpen(true)}
               >
                 <PenLine className="h-3.5 w-3.5" />
-                Review Stay
+                Rate Stay
               </Button>
             )}
 

@@ -7,13 +7,15 @@ export default function StaffRoleRedirect() {
 
   switch (role) {
     case 'SUPER_ADMIN':
+      return <Navigate to="/staff/superadmin/overview" replace />;
     case 'OWNER':
+      return <Navigate to="/staff/owner/overview" replace />;
     case 'ADMIN':
       return <Navigate to="/staff/admin/overview" replace />;
     case 'STAFF':
       return <Navigate to="/staff/receptionist/bookings" replace />;
     default:
       // Unknown or missing role — re-auth
-      return <Navigate to="/login/staff" replace />;
+      return <Navigate to="/login/owner" replace />;
   }
 }

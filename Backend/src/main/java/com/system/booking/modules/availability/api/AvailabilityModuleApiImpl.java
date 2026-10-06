@@ -136,15 +136,34 @@ public class AvailabilityModuleApiImpl implements AvailabilityModuleApi {
         return roomAvailabilityRepository.isRoomAvailable(resourceId, checkIn, checkOut);
     }
 
+    @Override
+    public AvailableRoomResponse getRoomDetails(UUID resourceId, LocalDate checkIn, LocalDate checkOut) {
+        Object[] row = roomAvailabilityRepository.findRoomById(resourceId)
+                .orElseThrow(() -> new jakarta.persistence.EntityNotFoundException("Room not found: " + resourceId));
+
+        LocalDate in = checkIn != null ? checkIn : LocalDate.now();
+        LocalDate out = checkOut != null ? checkOut : in.plusDays(1);
+        long nights = Math.max(1, ChronoUnit.DAYS.between(in, out));
+
+        return mapToResponse(row, in, out, nights);
+    }
+
     private AvailableRoomResponse mapToResponse(Object[] row, LocalDate checkIn, LocalDate checkOut, long nights) {
         UUID roomId = (UUID) row[0];
         String roomName = (String) row[1];
         String resourceType = (String) row[2];
         Integer capacity = row[3] != null ? ((Number) row[3]).intValue() : null;
-        // row[4] = specs (String/PGobject) — pass as-is for now
+        // row[4] = specs (String/PGobject/Map)
         Map<String, Object> specs = null;
         String bedType = null;
-        if (row[4] != null) {
+        if (row[4] instanceof Map<?, ?> m) {
+            @SuppressWarnings("unchecked")
+            Map<String, Object> casted = (Map<String, Object>) m;
+            specs = casted;
+            if (specs.get("bedType") != null) {
+                bedType = specs.get("bedType").toString();
+            }
+        } else if (row[4] != null) {
             String specsStr = row[4].toString();
             if (specsStr.contains("\"bedType\"")) {
                 int idx = specsStr.indexOf("\"bedType\"");

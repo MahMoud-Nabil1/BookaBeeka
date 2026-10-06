@@ -31,13 +31,19 @@ public class Review extends TenantBaseEntity {
     @Column(name = "customer_id", nullable = false)
     private UUID customerId;
 
-    // NOTE: intentionally NOT the same id-space as booking.service_offering_id
-    @Column(name = "service_id", nullable = false)
+    // service offering this review is about — nullable because not all bookings have an
+    // explicit service offering (e.g. room-only bookings with no ResourceServiceLink).
+    @Column(name = "service_id")
     private UUID serviceId;
 
     // which staff member the review is about, if applicable — separate from who replies
     @Column(name = "staff_id")
     private UUID staffId;
+
+    // the room (resource) this review is about — set from the booking's resource_id at creation time.
+    // Enables direct room-based review queries even when serviceId is null.
+    @Column(name = "room_id")
+    private UUID roomId;
 
     @Column(name = "rating", nullable = false)
     private Integer rating;

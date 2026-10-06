@@ -51,29 +51,29 @@ public class AuthenticationController {
     private final AuthenticationService authenticationService;
 
     /**
-     * SuperAdmin login endpoint.
+     * Unified Owner/Admin login endpoint.
      *
-     * <p>Authenticates against the {@code super_admin} user table. The resulting JWT
-     * contains {@code role=SUPER_ADMIN} with a {@code null} tenant_id, granting
-     * platform-wide access without being scoped to any hotel tenant.</p>
-     */
-    @PostMapping("/super-admin/login")
-    public ResponseEntity<LoginResponse> superAdminLogin(@Valid @RequestBody LoginRequest request) {
-        return ResponseEntity.ok(authenticationService.loginSuperAdmin(request));
-    }
-
-    /**
-     * Hotel Owner login endpoint.
-     *
-     * <p>Authenticates against the {@code hotel_owner} table. The resulting JWT embeds
-     * the Owner's {@code tenant_id} claim, which is automatically extracted by the
-     * {@code JwtAuthenticationFilter} and stored in the {@code TenantContextHolder}
-     * for every subsequent request. This is the cornerstone of tenant isolation — the
-     * tenant scope is established once at login and never relies on client-supplied IDs.</p>
+     * <p>This endpoint serves as a unified authentication gateway for OWNER 
+     * and ADMIN roles. It attempts to authenticate the provided credentials against each 
+     * user type in sequence, returning a JWT token for the first successful match.</p>
+     * 
+     * <p>The authentication order is:
+     * <ol>
+     *   <li>OWNER - Hotel owner with embedded tenant_id in JWT</li>
+     *   <li>ADMIN - Branch admin with embedded tenant_id and branch_id in JWT</li>
+     * </ol>
+     * </p>
+     * 
+     * <p><strong>Security Note:</strong> SUPER_ADMIN credentials are NOT accepted here. 
+     * SuperAdmins must use the dedicated {@code /super-admin/login} endpoint to enforce 
+     * proper role separation and prevent credential misuse.</p>
+     * 
+     * <p>This unified approach provides a single login portal for hotel staff while maintaining 
+     * security guarantees - each role's credentials are validated against their respective user tables.</p>
      */
     @PostMapping("/owner/login")
     public ResponseEntity<LoginResponse> ownerLogin(@Valid @RequestBody LoginRequest request) {
-        return ResponseEntity.ok(authenticationService.loginOwner(request));
+        return ResponseEntity.ok(authenticationService.loginOwnerOrAdmin(request));
     }
 
     /**
@@ -82,10 +82,28 @@ public class AuthenticationController {
      * <p>Authenticates against the {@code hotel_admin} table. Like the Owner token,
      * the Admin JWT carries a {@code tenant_id} claim, restricting all inventory
      * and availability operations to the Admin's assigned hotel tenant.</p>
+     * 
+     * @deprecated Use {@code /owner/login} instead for unified owner/admin authentication.
      */
+    @Deprecated
     @PostMapping("/admin/login")
     public ResponseEntity<LoginResponse> adminLogin(@Valid @RequestBody LoginRequest request) {
         return ResponseEntity.ok(authenticationService.loginAdmin(request));
+    }
+
+    /**
+     * SuperAdmin login endpoint.
+     *
+     * <p>Authenticates against the {@code super_admin} user table. The resulting JWT
+     * contains {@code role=SUPER_ADMIN} with a {@code null} tenant_id, granting
+     * platform-wide access without being scoped to any hotel tenant.</p>
+     * 
+     * <p><strong>Security:</strong> This is the ONLY endpoint that accepts SuperAdmin credentials. 
+     * SuperAdmins cannot authenticate via {@code /owner/login} to enforce proper role separation.</p>
+     */
+    @PostMapping("/super-admin/login")
+    public ResponseEntity<LoginResponse> superAdminLogin(@Valid @RequestBody LoginRequest request) {
+        return ResponseEntity.ok(authenticationService.loginSuperAdmin(request));
     }
 
     /**
@@ -147,4 +165,4 @@ public class AuthenticationController {
                 "message", "Password has been successfully reset. You may now log in with your new credentials."
         ));
     }
-}
+}

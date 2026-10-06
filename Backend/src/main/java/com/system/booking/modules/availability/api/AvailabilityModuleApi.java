@@ -29,4 +29,5 @@ public interface AvailabilityModuleApi {
     // ── Hotel date-range availability API ────────────────────────
     Page<AvailableRoomResponse> searchAvailableRooms(RoomSearchRequest request, Pageable pageable);
     boolean isRoomAvailableForDates(UUID resourceId, LocalDate checkIn, LocalDate checkOut);
+    AvailableRoomResponse getRoomDetails(UUID resourceId, LocalDate checkIn, LocalDate checkOut);
 }

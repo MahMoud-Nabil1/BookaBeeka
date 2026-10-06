@@ -23,9 +23,13 @@ function formatDate(dateString: string): string {
 }
 
 export default function ReviewCard({ review }: ReviewCardProps) {
-  // Generate short pseudo-initials or Guest tag
-  const customerLabel = 'Verified Guest';
-  const initial = 'G';
+  // Build reviewer display name from real data; fall back to "Verified Guest" only when absent
+  const firstName = review.customerFirstName?.trim() || '';
+  const lastName  = review.customerLastName?.trim()  || '';
+  const customerLabel =
+    firstName || lastName
+      ? `${firstName} ${lastName}`.trim()
+      : 'Verified Guest';
 
   return (
     <Card className="border border-border/70 shadow-none hover:shadow-low transition-shadow bg-card">
@@ -35,7 +39,7 @@ export default function ReviewCard({ review }: ReviewCardProps) {
           <div className="flex items-center gap-3">
             <Avatar className="h-10 w-10 border border-border/80">
               <AvatarFallback className="bg-primary/10 text-primary font-medium text-sm">
-                <User className="h-5 w-5 text-primary" />
+                {firstName ? firstName[0].toUpperCase() : <User className="h-5 w-5 text-primary" />}
               </AvatarFallback>
             </Avatar>
             <div>

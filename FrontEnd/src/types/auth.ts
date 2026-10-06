@@ -7,7 +7,12 @@ export interface CustomerLoginRequest {
   password: string;
 }
 
-export interface StaffLoginRequest {
+export interface OwnerLoginRequest {
+  email: string;
+  password: string;
+}
+
+export interface SuperAdminLoginRequest {
   email: string;
   password: string;
 }
@@ -25,6 +30,26 @@ export interface DecodedStaffToken {
   branch_id?: string;   // UUID string, null for SUPER_ADMIN
   iat: number;
   exp: number;
+}
+
+export interface OwnerRegisterRequest {
+  hotelName: string;
+  subdomain: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  phone?: string;
+  currency?: string;
+  timezone?: string;
+}
+
+export interface OwnerRegisterResponse {
+  adminId: string;
+  fullName: string;
+  email: string;
+  role: string;
+  message: string;
 }
 
 export interface DecodedCustomerToken {

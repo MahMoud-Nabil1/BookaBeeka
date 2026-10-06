@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { ChevronLeft, MapPin, Users, Bed, Loader2, AlertCircle, ShieldCheck, Sparkles } from 'lucide-react';
+import { ChevronLeft, MapPin, Users, Bed, Loader2, AlertCircle, ShieldCheck, Sparkles, ChevronRight } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import PageLayout from '../../../components/layout/PageLayout';
 import { useCreateBooking } from '../../bookings/hooks/useCreateBooking';
-import { ProductReviewsSection, StarRating, useServiceReviews } from '../../reviews';
+import { ProductReviewsSection, StarRating, useRoomReviews } from '../../reviews';
+import { useRoomAmenities } from '../hooks/useAmenities';
+import { useRoomPhotos } from '../hooks/useMedia';
 import api from '../../../config/api';
 
 const ROOM_TYPE_PHOTOS: Record<string, string> = {
@@ -22,6 +24,7 @@ const ROOM_TYPE_PHOTOS: Record<string, string> = {
 const DEFAULT_PHOTO = 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?auto=format&fit=crop&w=1200&q=80';
 
 function getRoomHeroImage(room: any): string {
+  if (!room) return DEFAULT_PHOTO;
   if (room.specs?.imageUrl && typeof room.specs.imageUrl === 'string') return room.specs.imageUrl;
   if (room.specs?.image && typeof room.specs.image === 'string') return room.specs.image;
 
@@ -46,45 +49,33 @@ export default function RoomDetailPage() {
     queryKey: ['room-detail', roomId],
     queryFn: async () => {
       let found: any = null;
-      try {
-        const res = await api.get('/api/availability/search', {
-          params: {
-            checkIn: todayStr,
-            checkOut: tomorrowStr,
-            page: 0,
-            size: 100,
-          },
-        });
 
-        found = res.data.content?.find(
-          (item: any) => (item.room?.id || item.roomInfo?.roomId) === roomId
-        );
-      } catch (err) {
-        console.warn('Availability search check failed:', err);
+      // Primary: fetch room details directly by roomId
+      try {
+        const res = await api.get(`/api/availability/rooms/${roomId}`);
+        found = res.data;
+      } catch {
+        // Fallback: search available rooms in case direct lookup fails
+        try {
+          const res = await api.get('/api/availability/search', {
+            params: {
+              checkIn: todayStr,
+              checkOut: tomorrowStr,
+              page: 0,
+              size: 100,
+            },
+          });
+
+          found = res.data.content?.find(
+            (item: any) => (item.room?.id || item.roomInfo?.roomId) === roomId
+          );
+        } catch (searchErr) {
+          console.warn('Availability search fallback failed:', searchErr);
+        }
       }
 
       if (!found) {
-        // Fallback: fetch room directly from inventory
-        try {
-          const directRes = await api.get(`/api/inventory/resources/${roomId}`);
-          const raw = directRes.data;
-          return {
-            id: raw.id,
-            tenantId: raw.tenantId,
-            hotelName: 'BookaBeeka Property',
-            name: raw.name || 'Standard Room',
-            roomCategory: raw.resourceType || raw.roomCategory || 'Standard Room',
-            capacity: raw.capacity || 2,
-            bedType: raw.specs?.bedType || 'Queen',
-            amenities: raw.specs?.amenities || ['WiFi', 'TV', 'Air Conditioning'],
-            specs: raw.specs || {},
-            price: 150,
-            currency: 'USD',
-            isBookable: raw.isBookable ?? true,
-          };
-        } catch {
-          throw new Error('Room not found');
-        }
+        throw new Error('Room not found');
       }
 
       return {
@@ -94,8 +85,11 @@ export default function RoomDetailPage() {
         name: found.room?.name || found.roomInfo?.roomName || found.room?.roomType || 'Standard Room',
         roomCategory: found.room?.roomType || found.roomInfo?.roomType || 'Standard Room',
         capacity: found.room?.capacity || found.roomInfo?.capacity || 2,
-        bedType: found.room?.bedType,
-        amenities: found.room?.amenities || [],
+        bedType: found.room?.bedType || found.room?.specs?.bedType || 'Queen',
+        amenities:
+          found.room?.amenities && found.room.amenities.length > 0
+            ? found.room.amenities
+            : found.room?.specs?.amenities || ['Free WiFi', 'Air Conditioning', 'Flat-screen TV'],
         specs: found.room?.specs || found.roomInfo?.specs || {},
         price: found.pricing?.pricePerNight ?? 150,
         currency: found.pricing?.currency || 'USD',
@@ -105,13 +99,30 @@ export default function RoomDetailPage() {
     enabled: !!roomId,
   });
 
-  const { data: reviewsData } = useServiceReviews(room?.id, room?.tenantId);
+  const { data: reviewsData } = useRoomReviews(room?.id, room?.tenantId);
+  const { data: roomAmenities = [] } = useRoomAmenities(room?.id || '');
+  const { data: roomPhotos = [] } = useRoomPhotos(room?.id);
   const reviewsList = reviewsData?.content || [];
   const reviewCount = reviewsData?.totalElements || 0;
-  const averageRating =
+  const averageRating: number | null =
     reviewsList.length > 0
       ? reviewsList.reduce((acc, r) => acc + (r.rating || 0), 0) / reviewsList.length
-      : 5.0;
+      : null;
+
+  // Photo carousel state
+  const [currentPhotoIndex, setCurrentPhotoIndex] = useState(0);
+  
+  // Sort photos by sortOrder and filter for primary first
+  const sortedPhotos = [...roomPhotos].sort((a, b) => {
+    if (a.isPrimary && !b.isPrimary) return -1;
+    if (!a.isPrimary && b.isPrimary) return 1;
+    return a.sortOrder - b.sortOrder;
+  });
+
+  // Use uploaded photos if available, otherwise fallback to hero image
+  const displayPhotos = sortedPhotos.length > 0 
+    ? sortedPhotos.map(p => p.url)
+    : [getRoomHeroImage(room)];
 
   const { mutate: createBooking, isPending: isBooking } = useCreateBooking();
 
@@ -172,10 +183,21 @@ export default function RoomDetailPage() {
     );
   }
 
-  const heroImage = getRoomHeroImage(room);
   const roomName = room.name && room.name !== 'ROOM' && room.name !== 'Room'
     ? room.name
     : `${room.roomCategory} Room`;
+
+  const handlePreviousPhoto = () => {
+    setCurrentPhotoIndex((prev) => 
+      prev === 0 ? displayPhotos.length - 1 : prev - 1
+    );
+  };
+
+  const handleNextPhoto = () => {
+    setCurrentPhotoIndex((prev) => 
+      prev === displayPhotos.length - 1 ? 0 : prev + 1
+    );
+  };
 
   return (
     <PageLayout
@@ -191,30 +213,77 @@ export default function RoomDetailPage() {
 
         {/* Left Column — Room Details */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Hero image banner */}
-          <div className="rounded-xl overflow-hidden aspect-[21/9] w-full relative shadow-raised">
+          {/* Photo carousel */}
+          <div className="rounded-xl overflow-hidden aspect-[21/9] w-full relative shadow-raised group">
             <img
-              src={heroImage}
-              alt={roomName}
-              className="w-full h-full object-cover"
+              src={displayPhotos[currentPhotoIndex]}
+              alt={`${roomName} - Photo ${currentPhotoIndex + 1}`}
+              className="w-full h-full object-cover transition-opacity duration-300"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+            
+            {/* Photo navigation */}
+            {displayPhotos.length > 1 && (
+              <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={handlePreviousPhoto}
+                >
+                  <ChevronLeft className="h-6 w-6" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white opacity-0 group-hover:opacity-100 transition-opacity"
+                  onClick={handleNextPhoto}
+                >
+                  <ChevronRight className="h-6 w-6" />
+                </Button>
+                
+                {/* Photo indicators */}
+                <div className="absolute bottom-20 left-1/2 -translate-x-1/2 flex gap-2">
+                  {displayPhotos.map((_, index) => (
+                    <button
+                      key={index}
+                      onClick={() => setCurrentPhotoIndex(index)}
+                      className={`w-2 h-2 rounded-full transition-all ${
+                        index === currentPhotoIndex
+                          ? 'bg-white w-6'
+                          : 'bg-white/50 hover:bg-white/75'
+                      }`}
+                      aria-label={`View photo ${index + 1}`}
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+            
+            {/* Badges */}
             <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between">
               <Badge className="bg-background/90 text-foreground text-sm shadow-low">
                 {room.roomCategory}
               </Badge>
-              {room.hotelName && (
-                <Badge variant="secondary" className="bg-background/90 text-foreground text-sm shadow-low">
-                  {room.hotelName}
-                </Badge>
-              )}
+              <div className="flex items-center gap-2">
+                {sortedPhotos.length > 0 && (
+                  <Badge variant="secondary" className="bg-background/90 text-foreground text-sm shadow-low">
+                    {currentPhotoIndex + 1} / {displayPhotos.length}
+                  </Badge>
+                )}
+                {room.hotelName && (
+                  <Badge variant="secondary" className="bg-background/90 text-foreground text-sm shadow-low">
+                    {room.hotelName}
+                  </Badge>
+                )}
+              </div>
             </div>
           </div>
 
           <div>
             <div className="flex flex-wrap items-center gap-3 mb-2">
               <h1 className="text-3xl font-bold tracking-tight text-foreground">{roomName}</h1>
-              {reviewCount > 0 && (
+              {reviewCount > 0 && averageRating !== null && (
                 <a
                   href="#reviews-section"
                   className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-500/10 text-amber-600 dark:text-amber-400 text-xs font-semibold hover:bg-amber-500/20 transition-colors cursor-pointer"
@@ -260,15 +329,16 @@ export default function RoomDetailPage() {
             </div>
 
             {/* Amenities Section */}
-            {room.amenities && room.amenities.length > 0 && (
+            {roomAmenities.length > 0 && (
               <div className="space-y-3 mb-8">
                 <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
                   <Sparkles className="h-5 w-5 text-primary" /> Included Amenities
                 </h2>
                 <div className="flex flex-wrap gap-2">
-                  {room.amenities.map((amenity: string) => (
-                    <Badge key={amenity} variant="outline" className="px-3 py-1 text-sm bg-muted/30">
-                      {amenity}
+                  {roomAmenities.map((amenity) => (
+                    <Badge key={amenity.id} variant="outline" className="px-3 py-1 text-sm bg-muted/30">
+                      {amenity.icon && <span className="mr-1">{amenity.icon}</span>}
+                      {amenity.name}
                     </Badge>
                   ))}
                 </div>
@@ -280,6 +350,7 @@ export default function RoomDetailPage() {
               <ProductReviewsSection
                 serviceId={room.id}
                 tenantId={room.tenantId}
+                roomId={room.id}
                 roomName={roomName}
               />
             </div>

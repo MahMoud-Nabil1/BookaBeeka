@@ -354,7 +354,10 @@ export default function LandingPage() {
                   <Link to="/register">Sign Up Free</Link>
                 </Button>
                 <Button size="lg" variant="outline" className="h-12 px-8 border-background/20 text-background hover:bg-background/10 hover:text-background" asChild>
-                  <Link to="/login/staff">Hotel Staff Portal</Link>
+                  <Link to="/login/owner">Owner Portal</Link>
+                </Button>
+                <Button size="lg" variant="outline" className="h-12 px-6 border-background/20 text-background hover:bg-background/10 hover:text-background" asChild>
+                  <Link to="/login/superadmin">SuperAdmin</Link>
                 </Button>
               </>
             ) : userType === 'CUSTOMER' ? (

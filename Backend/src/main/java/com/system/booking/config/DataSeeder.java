@@ -53,6 +53,9 @@ public class DataSeeder {
             // Seed data for each tenant that doesn't have resources yet
             for (Tenant tenant : tenants) {
                 UUID tenantId = tenant.getId();
+                if (SystemTenantInitializer.SYSTEM_TENANT_ID.equals(tenantId) || "system-platform".equalsIgnoreCase(tenant.getSubdomain())) {
+                    continue;
+                }
                 
                 long existingResources = resourceRepository.countByTenantId(tenantId);
                 if (existingResources > 0) {

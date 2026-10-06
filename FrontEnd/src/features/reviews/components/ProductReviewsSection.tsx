@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useServiceReviews } from '../hooks/useReviews';
+import { useServiceReviews, useRoomReviews } from '../hooks/useReviews';
 import ReviewSummary from './ReviewSummary';
 import ReviewCard from './ReviewCard';
 import AddReviewModal from './AddReviewModal';
@@ -16,6 +16,7 @@ import AddReviewModal from './AddReviewModal';
 interface ProductReviewsSectionProps {
   serviceId: string;
   tenantId: string;
+  roomId?: string;        // preferred — query reviews by room directly
   roomName?: string;
   className?: string;
 }
@@ -23,6 +24,7 @@ interface ProductReviewsSectionProps {
 export default function ProductReviewsSection({
   serviceId,
   tenantId,
+  roomId,
   roomName,
   className,
 }: ProductReviewsSectionProps) {
@@ -30,12 +32,11 @@ export default function ProductReviewsSection({
   const [filterRating, setFilterRating] = useState<string>('all');
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
 
-  const { data, isLoading, isError } = useServiceReviews(
-    serviceId,
-    tenantId,
-    page,
-    10
-  );
+  // Prefer room-based query (uses the new /api/reviews/room/{roomId} endpoint which is
+  // keyed on the actual room UUID). Fall back to service-based query for backward compat.
+  const roomQuery    = useRoomReviews(roomId, tenantId, page, 10);
+  const serviceQuery = useServiceReviews(roomId ? undefined : serviceId, tenantId, page, 10);
+  const { data, isLoading, isError } = roomId ? roomQuery : serviceQuery;
 
   const rawReviews = data?.content || [];
   const totalReviews = data?.totalElements || 0;

@@ -73,6 +73,17 @@ public class BookingController {
         return ResponseEntity.ok(Map.of("message", "Booking completed", "bookingId", bookingId.toString()));
     }
 
+    // get booking by ID
+    @GetMapping("/{bookingId}")
+    @PreAuthorize("isAuthenticated()")
+    public ResponseEntity<BookingDto> getBooking(
+            @PathVariable UUID bookingId,
+            @RequestParam(required = false) UUID tenantId) {
+
+        BookingDto booking = bookingApi.getBookingById(tenantId, bookingId);
+        return ResponseEntity.ok(booking);
+    }
+
     // check booking status
     @GetMapping("/{bookingId}/status")
     @PreAuthorize("hasRole('CUSTOMER')")

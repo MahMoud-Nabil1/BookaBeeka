@@ -6,12 +6,14 @@ import com.system.booking.modules.inventory.internal.entity.ServiceOffering;
 import com.system.booking.modules.inventory.internal.repository.ResourceRepository;
 import com.system.booking.modules.inventory.internal.repository.ResourceServiceLinkRepository;
 import com.system.booking.modules.inventory.internal.repository.ServiceOfferingRepository;
+import com.system.booking.modules.owner.internal.repository.OwnerRepository;
 import com.system.booking.modules.tenant.internal.entity.Tenant;
 import com.system.booking.modules.tenant.internal.repository.TenantRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
@@ -32,6 +34,25 @@ public class DataSeederController {
     private final ResourceRepository resourceRepository;
     private final ServiceOfferingRepository serviceOfferingRepository;
     private final ResourceServiceLinkRepository resourceServiceLinkRepository;
+    private final PasswordEncoder passwordEncoder;
+    private final OwnerRepository ownerRepository;
+
+    /**
+     * Generate BCrypt hash for a password.
+     * Useful for debugging password authentication issues.
+     * Example: GET /api/dev/seed/generate-hash?password=superadmin123
+     */
+    @GetMapping("/generate-hash")
+    public ResponseEntity<Map<String, String>> generatePasswordHash(@RequestParam String password) {
+        String hash = passwordEncoder.encode(password);
+        log.info("Generated BCrypt hash for password: {}", password);
+        return ResponseEntity.ok(Map.of(
+            "password", password,
+            "hash", hash,
+            "algorithm", "BCrypt",
+            "note", "Use this hash in your SQL UPDATE statement"
+        ));
+    }
 
     @PostMapping("/all")
     public ResponseEntity<Map<String, Object>> seedAllTenants() {

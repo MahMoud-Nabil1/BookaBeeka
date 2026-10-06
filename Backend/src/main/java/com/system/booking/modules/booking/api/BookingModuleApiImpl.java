@@ -4,6 +4,8 @@ import com.system.booking.modules.booking.internal.entity.Booking;
 import com.system.booking.modules.booking.internal.repository.BookingRepository;
 import com.system.booking.modules.booking.internal.service.BookingCreationService;
 import com.system.booking.modules.booking.internal.service.BookingLifecycleService;
+import com.system.booking.modules.inventory.api.InventoryModuleApi;
+import com.system.booking.modules.inventory.internal.dto.response.ResourceResponse;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -23,6 +25,7 @@ public class BookingModuleApiImpl implements BookingModuleApi {
     private final BookingCreationService creationService;
     private final BookingLifecycleService lifecycleService;
     private final BookingRepository bookingRepo;
+    private final InventoryModuleApi inventoryApi;
 
     @Override
     @Transactional
@@ -113,11 +116,31 @@ public class BookingModuleApiImpl implements BookingModuleApi {
 
     // maps entity to DTO
     private BookingDto toDto(Booking b) {
+        String roomName = null;
+        String roomNumber = null;
+        String roomTypeName = null;
+
+        if (b.getTenantId() != null && b.getRoomId() != null) {
+            try {
+                ResourceResponse resource = inventoryApi.getResourceByTenantAndId(b.getTenantId(), b.getRoomId());
+                if (resource != null) {
+                    roomName = resource.name();
+                    roomNumber = resource.roomNumber();
+                    roomTypeName = resource.roomTypeName();
+                }
+            } catch (Exception ignored) {
+                // If resource cannot be resolved or is absent, leave metadata as null
+            }
+        }
+
         return new BookingDto(
                 b.getId(),
                 b.getTenantId(),
                 b.getCustomerId(),
                 b.getRoomId(),
+                roomName,
+                roomNumber,
+                roomTypeName,
                 b.getServiceOfferingId(),
                 b.getStartTime(),
                 b.getEndTime(),

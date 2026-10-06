@@ -196,4 +196,35 @@ public class RoomAvailabilityRepository {
 
         return (Boolean) query.getSingleResult();
     }
+
+    /**
+     * Finds a single room and its hotel info by room ID.
+     */
+    public java.util.Optional<Object[]> findRoomById(UUID roomId) {
+        String sql = """
+            SELECT
+                r.id          AS room_id,
+                r.name        AS room_name,
+                r.resource_type,
+                r.capacity,
+                r.specs,
+                COALESCE(r.price_per_night, 150.00) AS price_per_night,
+                COALESCE(r.currency, 'USD')         AS currency,
+                t.id          AS hotel_id,
+                t.name        AS hotel_name,
+                t.subdomain
+            FROM resource r
+            JOIN tenant t ON r.tenant_id = t.id
+            WHERE r.id = CAST(:roomId AS uuid)
+              AND r.is_active = true
+              AND t.status = 'ACTIVE'
+            """;
+
+        Query query = entityManager.createNativeQuery(sql);
+        query.setParameter("roomId", roomId.toString());
+
+        @SuppressWarnings("unchecked")
+        List<Object[]> results = query.getResultList();
+        return results.isEmpty() ? java.util.Optional.empty() : java.util.Optional.of(results.get(0));
+    }
 }

@@ -7,16 +7,15 @@ import jakarta.validation.constraints.Size;
 
 import java.util.UUID;
 
-// what the customer sends to leave a review on a completed booking
+// what the customer sends to leave a review on a completed booking.
+// serviceId is intentionally absent — the backend derives it from the verified booking
+// to prevent clients from supplying an arbitrary (potentially invalid) service UUID.
 public record CreateReviewRequestDto(
         @NotNull(message = "Tenant ID is required")
         UUID tenantId,
 
         @NotNull(message = "Booking ID is required")
         UUID bookingId,
-
-        @NotNull(message = "Service ID is required")
-        UUID serviceId,
 
         @NotNull(message = "Rating is required")
         @Min(value = 1, message = "Rating must be between 1 and 5")

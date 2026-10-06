@@ -42,9 +42,15 @@ type BackendBookingDto = {
   customerId: string;
   roomId?: string;
   resourceId?: string;
+  roomName?: string;
+  roomNumber?: string;
+  roomTypeName?: string;
   serviceOfferingId?: string;
   startTime: string;
   endTime: string;
+  checkInDate?: string;
+  checkOutDate?: string;
+  numberOfRooms?: number;
   status: string;
   totalAmount: number;
   currency: string;
@@ -59,9 +65,15 @@ function mapToFrontendBookingDto(backend: BackendBookingDto): BookingDto {
     tenantId: backend.tenantId,
     customerId: backend.customerId,
     roomId: backend.roomId || backend.resourceId || '',
+    roomName: backend.roomName,
+    roomNumber: backend.roomNumber,
+    roomTypeName: backend.roomTypeName,
     roomTypeId: backend.serviceOfferingId || '',
     startTime: backend.startTime,
     endTime: backend.endTime,
+    checkInDate: backend.checkInDate,
+    checkOutDate: backend.checkOutDate,
+    numberOfRooms: backend.numberOfRooms,
     status: backend.status as BookingDto['status'],
     totalAmount: backend.totalAmount,
     currency: backend.currency,
@@ -96,6 +108,13 @@ export const bookingApi = {
     return response.data;
   },
 
+  // POST /api/bookings/{bookingId}/complete
+  // Admin/Owner only — marks booking as COMPLETED after checkout date
+  completeBooking: async (bookingId: string): Promise<{ message: string; bookingId: string }> => {
+    const response = await api.post(`/api/bookings/${bookingId}/complete`);
+    return response.data;
+  },
+
   // POST /api/bookings/{bookingId}/cancel?tenantId=&reason=
   cancelBooking: async (
     bookingId: string,
@@ -106,6 +125,17 @@ export const bookingApi = {
       params: { ...(tenantId ? { tenantId } : {}), ...(reason ? { reason } : {}) },
     });
     return response.data;
+  },
+
+  // GET /api/bookings/{bookingId}?tenantId= (tenantId optional)
+  getBooking: async (
+    bookingId: string,
+    tenantId?: string | null
+  ): Promise<BookingDto> => {
+    const response = await api.get<BackendBookingDto>(`/api/bookings/${bookingId}`, {
+      params: tenantId ? { tenantId } : {},
+    });
+    return mapToFrontendBookingDto(response.data);
   },
 
   // GET /api/bookings/{bookingId}/status?tenantId= (tenantId optional)

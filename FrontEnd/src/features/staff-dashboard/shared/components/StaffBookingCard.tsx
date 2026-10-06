@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { format } from 'date-fns';
-import { CalendarDays, Clock, Loader2 } from 'lucide-react';
+import { CalendarDays, Clock, Loader2, CheckCircle2 } from 'lucide-react';
 import BookingStatusBadge from '../../../../components/BookingStatusBadge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,23 +10,38 @@ import {
 } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { useConfirmBooking, useCancelBookingStaff } from '../hooks/useStaffBookings';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+import { useConfirmBooking, useCancelBookingStaff, useCompleteBooking } from '../hooks/useStaffBookings';
 import type { BookingDto } from '../../../../types/booking';
 
 interface StaffBookingCardProps {
   booking: BookingDto;
   /** If false, hide the Cancel button (e.g. for receptionist role) */
   canCancel?: boolean;
+  /** If false, hide the Complete button (e.g. for receptionist role) */
+  canComplete?: boolean;
 }
 
-export default function StaffBookingCard({ booking, canCancel = true }: StaffBookingCardProps) {
+export default function StaffBookingCard({ booking, canCancel = true, canComplete = true }: StaffBookingCardProps) {
   const { mutate: confirm, isPending: confirming } = useConfirmBooking();
   const { mutate: cancel, isPending: cancelling } = useCancelBookingStaff();
+  const { mutate: complete, isPending: completing } = useCompleteBooking();
   const [cancelOpen, setCancelOpen] = useState(false);
   const [reason, setReason] = useState('');
 
   const canConfirm = booking.status === 'PENDING_PAYMENT';
   const canCancelBooking = canCancel && (booking.status === 'PENDING_PAYMENT' || booking.status === 'CONFIRMED');
+  const canCompleteBooking = canComplete && booking.status === 'CONFIRMED';
 
   return (
     <Card className="border-border hover:shadow-low transition-shadow">
@@ -37,6 +52,11 @@ export default function StaffBookingCard({ booking, canCancel = true }: StaffBoo
             <span className="text-xs text-muted-foreground font-mono">
               #{booking.bookingId.substring(0, 8)}
             </span>
+            {(booking.roomName || booking.roomNumber) && (
+              <span className="text-xs font-medium text-foreground bg-muted px-2 py-0.5 rounded">
+                {booking.roomName || ''}{booking.roomNumber ? (booking.roomName ? ` · Room ${booking.roomNumber}` : `Room ${booking.roomNumber}`) : ''}
+              </span>
+            )}
           </div>
 
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -68,6 +88,39 @@ export default function StaffBookingCard({ booking, canCancel = true }: StaffBoo
               {confirming && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
               Confirm
             </Button>
+          )}
+
+          {canCompleteBooking && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button size="sm" variant="default" className="bg-green-600 hover:bg-green-700 text-white">
+                  <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
+                  Complete
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Complete Booking</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Mark this booking as completed? This confirms the customer has checked out and allows them to leave a review.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    disabled={completing}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      complete(booking.bookingId);
+                    }}
+                    className="bg-green-600 hover:bg-green-700"
+                  >
+                    {completing && <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" />}
+                    Complete
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           )}
 
           {canCancelBooking && (

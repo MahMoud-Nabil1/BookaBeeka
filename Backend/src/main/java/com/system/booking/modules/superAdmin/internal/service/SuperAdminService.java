@@ -8,6 +8,9 @@ import com.system.booking.modules.booking.internal.entity.BookingStatus;
 import com.system.booking.modules.booking.internal.repository.BookingRepository;
 import com.system.booking.modules.customer.internal.entity.Customer;
 import com.system.booking.modules.customer.internal.repository.CustomerRepository;
+import com.system.booking.modules.inventory.internal.dto.response.ResourceResponse;
+import com.system.booking.modules.inventory.internal.entity.Resource;
+import com.system.booking.modules.inventory.internal.repository.ResourceRepository;
 import com.system.booking.modules.payment.internal.entity.CustomerWallet;
 import com.system.booking.modules.payment.internal.entity.Payment;
 import com.system.booking.modules.payment.internal.entity.PaymentStatus;
@@ -27,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -41,6 +45,7 @@ public class SuperAdminService {
     private final WalletTransactionRepository walletTransactionRepository;
     private final CustomerWalletRepository    customerWalletRepository;
     private final TenantWalletRepository      tenantWalletRepository;
+    private final ResourceRepository          resourceRepository;
 
     @Transactional(readOnly = true)
     public PlatformStatsResponse getPlatformStats() {
@@ -167,6 +172,14 @@ public class SuperAdminService {
                 .map(this::toCustomerWalletSummary);
     }
 
+    @Transactional(readOnly = true)
+    public List<ResourceResponse> listRoomsByTenant(UUID tenantId) {
+        return resourceRepository.findByTenantId(tenantId)
+                .stream()
+                .map(this::toResourceResponse)
+                .toList();
+    }
+
     private TenantSummaryResponse toTenantSummary(Tenant t) {
         return new TenantSummaryResponse(
                 t.getId(), t.getName(), t.getSubdomain(),
@@ -248,5 +261,26 @@ public class SuperAdminService {
         customer.setIsActive(active);
         customerRepository.save(customer);
         return toCustomerSummary(customer);
+    }
+
+    private ResourceResponse toResourceResponse(Resource r) {
+        return new ResourceResponse(
+                r.getId(),
+                r.getTenantId(),
+                r.getRoomType() != null ? r.getRoomType().getId() : null,
+                r.getRoomType() != null ? r.getRoomType().getName() : null,
+                r.getName(),
+                r.getRoomNumber(),
+                r.getFloor(),
+                r.getStatus(),
+                r.getResourceType(),
+                r.getCapacity(),
+                r.getSpecs(),
+                r.getIsActive(),
+                r.getIsBookable(),
+                r.getPricePerNight(),
+                r.getCurrency(),
+                r.getCreatedAt()
+        );
     }
 }

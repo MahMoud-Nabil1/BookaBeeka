@@ -137,17 +137,17 @@ export const roomsApi = {
     return response.data.map(mapToRoomTypeResponse);
   },
 
-  // POST /api/inventory/resources/{roomId}/link-service?tenantId=&serviceOfferingId=
+  // POST /api/inventory/resources/{roomId}/link-service/{serviceOfferingId}?tenantId=
   linkRoomType: async (roomId: string, tenantId: string, roomTypeId: string) => {
-    await api.post(`/api/inventory/resources/${roomId}/link-service`, null, {
-      params: { tenantId, serviceOfferingId: roomTypeId },
+    await api.post(`/api/inventory/resources/${roomId}/link-service/${roomTypeId}`, null, {
+      params: { tenantId },
     });
   },
 
-  // DELETE /api/inventory/resources/{roomId}/unlink-service?tenantId=&serviceOfferingId=
+  // DELETE /api/inventory/resources/{roomId}/unlink-service/{serviceOfferingId}?tenantId=
   unlinkRoomType: async (roomId: string, tenantId: string, roomTypeId: string) => {
-    await api.delete(`/api/inventory/resources/${roomId}/unlink-service`, {
-      params: { tenantId, serviceOfferingId: roomTypeId },
+    await api.delete(`/api/inventory/resources/${roomId}/unlink-service/${roomTypeId}`, {
+      params: { tenantId },
     });
   },
 };

@@ -8,6 +8,8 @@ import com.system.booking.modules.inventory.internal.service.ResourceService;
 import com.system.booking.modules.inventory.internal.service.RoomTypeService;
 import com.system.booking.modules.inventory.internal.service.ServiceOfferingService;
 import com.system.booking.modules.inventory.internal.repository.ResourceAmenityRepository;
+import com.system.booking.modules.inventory.internal.repository.ResourceServiceLinkRepository;
+import com.system.booking.modules.inventory.internal.repository.ServiceOfferingRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -23,6 +25,8 @@ public class InventoryModuleApiImpl implements InventoryModuleApi {
     private final ServiceOfferingService serviceOfferingService;
     private final RoomTypeService roomTypeService;
     private final ResourceAmenityRepository resourceAmenityRepository;
+    private final ResourceServiceLinkRepository resourceServiceLinkRepository;
+    private final ServiceOfferingRepository serviceOfferingRepository;
 
     @Override
     public List<String> listAmenityNamesForResource(UUID resourceId) {
@@ -49,5 +53,19 @@ public class InventoryModuleApiImpl implements InventoryModuleApi {
     @Override
     public RoomTypeResponse getRoomTypeByTenantAndId(UUID tenantId, UUID roomTypeId) {
         return roomTypeService.getRoomType(tenantId, roomTypeId);
+    }
+
+    @Override
+    public UUID getFirstServiceOfferingIdForRoom(UUID tenantId, UUID roomId) {
+        return resourceServiceLinkRepository.findByTenantIdAndResourceId(tenantId, roomId)
+                .stream()
+                .findFirst()
+                .map(link -> link.getServiceOffering().getId())
+                .orElse(null);
+    }
+
+    @Override
+    public boolean serviceOfferingExists(UUID serviceOfferingId) {
+        return serviceOfferingId != null && serviceOfferingRepository.existsById(serviceOfferingId);
     }
 }

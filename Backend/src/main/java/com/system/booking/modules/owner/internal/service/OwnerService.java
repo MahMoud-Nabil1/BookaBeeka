@@ -1,5 +1,6 @@
 package com.system.booking.modules.owner.internal.service;
 
+import com.system.booking.common.config.CacheConfig;
 import com.system.booking.modules.hoteladmin.port.in.HotelAdminProvisioningPort;
 import com.system.booking.modules.owner.internal.dto.*;
 import com.system.booking.modules.owner.internal.entity.Owner;
@@ -10,6 +11,9 @@ import com.system.booking.modules.tenant.internal.entity.Tenant;
 import com.system.booking.modules.tenant.internal.repository.TenantRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,6 +34,10 @@ public class OwnerService {
     private final PasswordEncoder passwordEncoder;
 
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = CacheConfig.CACHE_OWNER_DASHBOARD, allEntries = true),
+            @CacheEvict(value = CacheConfig.CACHE_OWNER_REVENUE, allEntries = true)
+    })
     public AppointAdminResponse registerOwner(OwnerRegisterRequest request) {
         if (tenantRepository.existsBySubdomain(request.subdomain())) {
             throw new IllegalArgumentException("Subdomain '" + request.subdomain() + "' is already taken");
@@ -92,7 +100,12 @@ public class OwnerService {
         return reportingRepository.listTenantAdmins(tenantId);
     }
 
+    /**
+     * Returns dashboard stats for an owner (revenue, bookings, admins, wallet).
+     * Cached for 5 minutes — involves 4 separate DB queries; slight staleness is acceptable.
+     */
     @Transactional(readOnly = true)
+    @Cacheable(value = CacheConfig.CACHE_OWNER_DASHBOARD, key = "#tenantId")
     public OwnerDashboardResponse getDashboard(UUID tenantId) {
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new EntityNotFoundException("Tenant not found: " + tenantId));
@@ -127,7 +140,12 @@ public class OwnerService {
         );
     }
 
+    /**
+     * Returns revenue summary for an owner.
+     * Cached for 5 minutes — aggregate query; slight staleness is acceptable.
+     */
     @Transactional(readOnly = true)
+    @Cacheable(value = CacheConfig.CACHE_OWNER_REVENUE, key = "#tenantId")
     public OwnerRevenueSummaryDto getRevenueSummary(UUID tenantId) {
         Tenant tenant = tenantRepository.findById(tenantId)
                 .orElseThrow(() -> new EntityNotFoundException("Tenant not found: " + tenantId));

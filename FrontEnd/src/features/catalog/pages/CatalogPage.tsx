@@ -87,6 +87,8 @@ async function getAllAvailableRooms(): Promise<RoomResponse[]> {
           bedType: item.room?.bedType,
           amenities: allRoomAmenities,
           rating: rating,
+          // Use real Cloudinary URL when available (served by backend batch photo query)
+          image: item.room?.primaryPhotoUrl || undefined,
           specs: {
             ...(item.room?.specs || item.roomInfo?.specs || {}),
             rating: rating,

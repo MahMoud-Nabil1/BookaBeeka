@@ -45,7 +45,7 @@ public class RoomAvailabilityRepository {
 
         String baseSql = buildBaseQuery(amenityCount > 0);
         String countSql = "SELECT COUNT(*) FROM (" + baseSql + ") AS count_query";
-        String pagedSql = baseSql + " ORDER BY r.price_per_night ASC NULLS LAST";
+        String pagedSql = baseSql + " ORDER BY COALESCE(r.price_per_night, NULLIF(r.specs->>'pricePerNight', '')::numeric, 150.00) ASC NULLS LAST";
 
         // Count query
         Query countQuery = entityManager.createNativeQuery(countSql);
@@ -79,11 +79,17 @@ public class RoomAvailabilityRepository {
                 r.resource_type,
                 r.capacity,
                 r.specs,
-                COALESCE(r.price_per_night, 150.00) AS price_per_night,
+                COALESCE(r.price_per_night, NULLIF(r.specs->>'pricePerNight', '')::numeric, 150.00) AS price_per_night,
                 COALESCE(r.currency, 'USD')         AS currency,
                 t.id          AS hotel_id,
                 t.name        AS hotel_name,
-                t.subdomain
+                t.subdomain,
+                COALESCE((
+                    SELECT STRING_AGG(a.name, ';;')
+                    FROM resource_amenity ra
+                    JOIN amenity a ON ra.amenity_id = a.id
+                    WHERE ra.resource_id = r.id
+                ), '')        AS amenity_names
             FROM resource r
             JOIN tenant t ON r.tenant_id = t.id
             WHERE r.is_bookable = true
@@ -93,8 +99,8 @@ public class RoomAvailabilityRepository {
               AND (CAST(:roomType    AS text)    IS NULL OR r.resource_type     = CAST(:roomType    AS text))
               AND (CAST(:minCapacity AS integer) IS NULL OR r.capacity         >= CAST(:minCapacity AS integer))
               AND (CAST(:bedType     AS text)    IS NULL OR r.specs->>'bedType' = CAST(:bedType     AS text))
-              AND (CAST(:minPrice    AS numeric) IS NULL OR r.price_per_night  >= CAST(:minPrice    AS numeric))
-              AND (CAST(:maxPrice    AS numeric) IS NULL OR r.price_per_night  <= CAST(:maxPrice    AS numeric))
+              AND (CAST(:minPrice    AS numeric) IS NULL OR COALESCE(r.price_per_night, NULLIF(r.specs->>'pricePerNight', '')::numeric, 150.00) >= CAST(:minPrice    AS numeric))
+              AND (CAST(:maxPrice    AS numeric) IS NULL OR COALESCE(r.price_per_night, NULLIF(r.specs->>'pricePerNight', '')::numeric, 150.00) <= CAST(:maxPrice    AS numeric))
             """);
 
         if (hasAmenities) {
@@ -208,11 +214,17 @@ public class RoomAvailabilityRepository {
                 r.resource_type,
                 r.capacity,
                 r.specs,
-                COALESCE(r.price_per_night, 150.00) AS price_per_night,
+                COALESCE(r.price_per_night, NULLIF(r.specs->>'pricePerNight', '')::numeric, 150.00) AS price_per_night,
                 COALESCE(r.currency, 'USD')         AS currency,
                 t.id          AS hotel_id,
                 t.name        AS hotel_name,
-                t.subdomain
+                t.subdomain,
+                COALESCE((
+                    SELECT STRING_AGG(a.name, ';;')
+                    FROM resource_amenity ra
+                    JOIN amenity a ON ra.amenity_id = a.id
+                    WHERE ra.resource_id = r.id
+                ), '')        AS amenity_names
             FROM resource r
             JOIN tenant t ON r.tenant_id = t.id
             WHERE r.id = CAST(:roomId AS uuid)

@@ -41,26 +41,47 @@ public class BookingController {
 
     // simulate payment success — keeping manual for now
     @PostMapping("/{bookingId}/confirm")
-    @PreAuthorize("hasRole('CUSTOMER')")
+    @PreAuthorize("hasAnyRole('CUSTOMER', 'OWNER', 'ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<Map<String, String>> confirmBooking(
             @PathVariable UUID bookingId,
-            @RequestParam UUID tenantId) {
+            @RequestParam(required = false) UUID tenantId) {
 
-        bookingApi.confirmBooking(tenantId, bookingId);
+        UUID effectiveTenantId = tenantId;
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (effectiveTenantId == null && auth != null && auth.getPrincipal() instanceof HotelUserPrincipal hp) {
+            effectiveTenantId = hp.tenantId();
+        }
+
+        bookingApi.confirmBooking(effectiveTenantId, bookingId);
         return ResponseEntity.ok(Map.of("message", "Booking confirmed", "bookingId", bookingId.toString()));
     }
 
-    // cancel a booking — only the owner can cancel their own booking
+    // cancel a booking — customer cancels own, or staff/owner cancels
     @PostMapping("/{bookingId}/cancel")
-    @PreAuthorize("hasRole('CUSTOMER')")
+    @PreAuthorize("hasAnyRole('CUSTOMER', 'OWNER', 'ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<CancellationResultDto> cancelBooking(
             @PathVariable UUID bookingId,
             @RequestParam(required = false) UUID tenantId,
-            @RequestParam(defaultValue = "Customer requested cancellation") String reason) {
+            @RequestParam(defaultValue = "Cancellation requested") String reason) {
 
-        CustomerPrincipal customer = SecurityUtil.getCurrentCustomerPrincipal();
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        UUID actorId = null;
+        UUID effectiveTenantId = tenantId;
 
-        CancellationResultDto result = bookingApi.cancelBooking(tenantId, bookingId, reason, customer.id());
+        if (authentication != null && authentication.getPrincipal() instanceof CustomerPrincipal cp) {
+            actorId = cp.id();
+        } else if (authentication != null && authentication.getPrincipal() instanceof HotelUserPrincipal hp) {
+            actorId = hp.id();
+            if (effectiveTenantId == null) {
+                effectiveTenantId = hp.tenantId();
+            }
+        } else if (authentication != null) {
+            try {
+                actorId = UUID.fromString(authentication.getName());
+            } catch (Exception ignored) {}
+        }
+
+        CancellationResultDto result = bookingApi.cancelBooking(effectiveTenantId, bookingId, reason, actorId);
         return ResponseEntity.ok(result);
     }
 
@@ -86,7 +107,7 @@ public class BookingController {
 
     // check booking status
     @GetMapping("/{bookingId}/status")
-    @PreAuthorize("hasRole('CUSTOMER')")
+    @PreAuthorize("isAuthenticated()")
     public ResponseEntity<BookingStatusDto> getStatus(
             @PathVariable UUID bookingId,
             @RequestParam(required = false) UUID tenantId) {
@@ -95,34 +116,53 @@ public class BookingController {
         return ResponseEntity.ok(status);
     }
 
-    // list my bookings — customerId is extracted from JWT, not from the URL
-    // tenantId is optional: customers without a tenant_id in their JWT see all bookings
+    // list tenant bookings for staff/owner
+    @GetMapping
+    @PreAuthorize("hasAnyRole('OWNER', 'ADMIN', 'SUPER_ADMIN')")
+    public ResponseEntity<List<BookingDto>> listTenantBookings(
+            @RequestParam(required = false) UUID tenantId) {
+
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        UUID targetTenantId = tenantId;
+        if (targetTenantId == null && authentication != null && authentication.getPrincipal() instanceof HotelUserPrincipal hp) {
+            targetTenantId = hp.tenantId();
+        }
+
+        List<BookingDto> bookings = bookingApi.listBookingsForTenant(targetTenantId);
+        return ResponseEntity.ok(bookings);
+    }
+
+    // list my bookings — for customers returns their own bookings; for hotel staff/owners returns tenant bookings
     @GetMapping("/mine")
     public ResponseEntity<List<BookingDto>> listMyBookings(
             @RequestParam(required = false) UUID tenantId) {
 
-        UUID customerId;
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication == null || !authentication.isAuthenticated()) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
         Object principal = authentication.getPrincipal();
-        if (principal instanceof CustomerPrincipal cp) {
-            customerId = cp.id();
-        } else if (principal instanceof HotelUserPrincipal hp) {
-            customerId = hp.id();
+        if (principal instanceof HotelUserPrincipal hp) {
+            UUID targetTenantId = (tenantId != null) ? tenantId : hp.tenantId();
+            List<BookingDto> bookings = bookingApi.listBookingsForTenant(targetTenantId);
+            return ResponseEntity.ok(bookings);
+        } else if (principal instanceof CustomerPrincipal cp) {
+            UUID customerId = cp.id();
+            List<BookingDto> bookings = (tenantId != null)
+                    ? bookingApi.listBookingsForCustomer(tenantId, customerId)
+                    : bookingApi.listBookingsForCustomer(customerId);
+            return ResponseEntity.ok(bookings);
         } else {
             try {
-                customerId = UUID.fromString(authentication.getName());
+                UUID customerId = UUID.fromString(authentication.getName());
+                List<BookingDto> bookings = (tenantId != null)
+                        ? bookingApi.listBookingsForCustomer(tenantId, customerId)
+                        : bookingApi.listBookingsForCustomer(customerId);
+                return ResponseEntity.ok(bookings);
             } catch (Exception e) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
             }
         }
-
-        List<BookingDto> bookings = (tenantId != null)
-                ? bookingApi.listBookingsForCustomer(tenantId, customerId)
-                : bookingApi.listBookingsForCustomer(customerId);
-        return ResponseEntity.ok(bookings);
     }
 }

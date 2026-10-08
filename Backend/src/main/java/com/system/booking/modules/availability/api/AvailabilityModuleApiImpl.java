@@ -181,10 +181,11 @@ public class AvailabilityModuleApiImpl implements AvailabilityModuleApi {
         String hotelName = (String) row[8];
         String subdomain = (String) row[9];
 
-        // Fetch amenity names for this room
-        List<String> amenityNames = resourceAmenityRepository.findByResourceId(roomId).stream()
-                .map(link -> link.getAmenity().getName())
-                .collect(Collectors.toList());
+        // Amenities are eagerly aggregated directly in the SQL query
+        String amenityNamesStr = (row.length > 10 && row[10] != null) ? row[10].toString() : "";
+        List<String> amenityNames = amenityNamesStr.isBlank()
+                ? List.of()
+                : java.util.Arrays.asList(amenityNamesStr.split(";;"));
 
         BigDecimal totalPrice = (pricePerNight != null && nights > 0)
                 ? pricePerNight.multiply(BigDecimal.valueOf(nights))

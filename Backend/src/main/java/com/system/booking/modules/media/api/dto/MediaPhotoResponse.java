@@ -5,8 +5,12 @@ import java.util.UUID;
 
 public record MediaPhotoResponse(
         UUID id,
+        UUID tenantId,
         UUID resourceId,
+        String url,
+        String publicId,
         String secureUrl,
+        String cloudinaryPublicId,
         String originalFilename,
         String format,
         Integer width,

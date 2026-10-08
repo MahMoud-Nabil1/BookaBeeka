@@ -74,6 +74,18 @@ public class BookingCreationService {
         } else {
             // Hotel room booking: price = pricePerNight × nights
             java.math.BigDecimal price = room != null ? room.pricePerNight() : null;
+            if (price == null && room != null && room.specs() != null && room.specs().get("pricePerNight") != null) {
+                Object raw = room.specs().get("pricePerNight");
+                if (raw instanceof java.math.BigDecimal bd) {
+                    price = bd;
+                } else if (raw instanceof Number n) {
+                    price = java.math.BigDecimal.valueOf(n.doubleValue());
+                } else {
+                    try {
+                        price = new java.math.BigDecimal(raw.toString().trim());
+                    } catch (Exception ignored) {}
+                }
+            }
             if (price == null && room != null && room.roomTypeId() != null) {
                 try {
                     var roomType = inventoryApi.getRoomTypeByTenantAndId(request.tenantId(), room.roomTypeId());

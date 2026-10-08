@@ -8,6 +8,7 @@ import com.system.booking.modules.inventory.api.InventoryModuleApi;
 import com.system.booking.modules.inventory.internal.dto.response.ResourceResponse;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -109,6 +110,20 @@ public class BookingModuleApiImpl implements BookingModuleApi {
     @Override
     public List<BookingDto> listBookingsForCustomer(UUID customerId) {
         return bookingRepo.findByCustomerId(customerId)
+                .stream()
+                .map(this::toDto)
+                .toList();
+    }
+
+    @Override
+    public List<BookingDto> listBookingsForTenant(UUID tenantId) {
+        if (tenantId == null) {
+            return bookingRepo.findAll(Sort.by(Sort.Direction.DESC, "createdAt"))
+                    .stream()
+                    .map(this::toDto)
+                    .toList();
+        }
+        return bookingRepo.findByTenantIdOrderByCreatedAtDesc(tenantId)
                 .stream()
                 .map(this::toDto)
                 .toList();

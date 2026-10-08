@@ -25,6 +25,8 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
 
     Optional<Booking> findByTenantIdAndId(UUID tenantId, UUID id);
 
+    List<Booking> findByTenantIdOrderByCreatedAtDesc(UUID tenantId);
+
     List<Booking> findByTenantIdAndCustomerId(UUID tenantId, UUID customerId);
 
     List<Booking> findByCustomerId(UUID customerId);

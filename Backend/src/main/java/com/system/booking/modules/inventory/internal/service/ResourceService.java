@@ -19,7 +19,10 @@ import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -62,6 +65,19 @@ public class ResourceService {
         Integer effectiveCapacity = req.capacity() != null ? req.capacity()
                 : (roomType != null ? roomType.getCapacity() : null);
 
+        BigDecimal effectivePrice = req.pricePerNight();
+        if (effectivePrice == null && req.specs() != null && req.specs().get("pricePerNight") != null) {
+            effectivePrice = parseBigDecimal(req.specs().get("pricePerNight"));
+        }
+        if (effectivePrice == null && roomType != null) {
+            effectivePrice = roomType.getBasePricePerNight();
+        }
+
+        Map<String, Object> effectiveSpecs = req.specs() != null ? new HashMap<>(req.specs()) : new HashMap<>();
+        if (effectivePrice != null && !effectiveSpecs.containsKey("pricePerNight")) {
+            effectiveSpecs.put("pricePerNight", effectivePrice);
+        }
+
         Resource resource = Resource.builder()
                 .tenantId(tenantId)
                 .roomType(roomType)
@@ -71,10 +87,10 @@ public class ResourceService {
                 .status(req.status() != null ? req.status() : RoomStatus.AVAILABLE)
                 .resourceType(req.resourceType() != null ? req.resourceType() : "ROOM")
                 .capacity(effectiveCapacity)
-                .specs(req.specs())
+                .specs(effectiveSpecs)
                 .isActive(true)
                 .isBookable(true)
-                .pricePerNight(req.pricePerNight() != null ? req.pricePerNight() : (roomType != null ? roomType.getBasePricePerNight() : null))
+                .pricePerNight(effectivePrice)
                 .currency(req.currency() != null ? req.currency() : "USD")
                 .build();
 
@@ -108,15 +124,32 @@ public class ResourceService {
             resource.setRoomNumber(req.roomNumber().trim());
         }
 
+        BigDecimal newPrice = req.pricePerNight();
+        if (newPrice == null && req.specs() != null && req.specs().get("pricePerNight") != null) {
+            newPrice = parseBigDecimal(req.specs().get("pricePerNight"));
+        }
+        if (newPrice != null) {
+            resource.setPricePerNight(newPrice);
+        }
+
         if (req.name() != null) resource.setName(req.name().trim());
         if (req.floor() != null) resource.setFloor(req.floor());
         if (req.status() != null) resource.setStatus(req.status());
         if (req.resourceType() != null) resource.setResourceType(req.resourceType());
         if (req.capacity() != null) resource.setCapacity(req.capacity());
-        if (req.specs() != null) resource.setSpecs(req.specs());
+        if (req.specs() != null) {
+            Map<String, Object> specsMap = new HashMap<>(req.specs());
+            if (resource.getPricePerNight() != null && !specsMap.containsKey("pricePerNight")) {
+                specsMap.put("pricePerNight", resource.getPricePerNight());
+            }
+            resource.setSpecs(specsMap);
+        } else if (resource.getPricePerNight() != null && (resource.getSpecs() == null || !resource.getSpecs().containsKey("pricePerNight"))) {
+            Map<String, Object> specsMap = resource.getSpecs() != null ? new HashMap<>(resource.getSpecs()) : new HashMap<>();
+            specsMap.put("pricePerNight", resource.getPricePerNight());
+            resource.setSpecs(specsMap);
+        }
         if (req.isActive() != null) resource.setIsActive(req.isActive());
         if (req.isBookable() != null) resource.setIsBookable(req.isBookable());
-        if (req.pricePerNight() != null) resource.setPricePerNight(req.pricePerNight());
         if (req.currency() != null) resource.setCurrency(req.currency());
 
         resource = resourceRepository.save(resource);
@@ -164,6 +197,19 @@ public class ResourceService {
     }
 
     private ResourceResponse toResponse(Resource r) {
+        BigDecimal effectivePrice = r.getPricePerNight();
+        if (effectivePrice == null && r.getSpecs() != null && r.getSpecs().get("pricePerNight") != null) {
+            effectivePrice = parseBigDecimal(r.getSpecs().get("pricePerNight"));
+        }
+        if (effectivePrice == null && r.getRoomType() != null) {
+            effectivePrice = r.getRoomType().getBasePricePerNight();
+        }
+
+        Map<String, Object> responseSpecs = r.getSpecs() != null ? new HashMap<>(r.getSpecs()) : new HashMap<>();
+        if (effectivePrice != null && !responseSpecs.containsKey("pricePerNight")) {
+            responseSpecs.put("pricePerNight", effectivePrice);
+        }
+
         return new ResourceResponse(
                 r.getId(),
                 r.getTenantId(),
@@ -175,12 +221,23 @@ public class ResourceService {
                 r.getStatus(),
                 r.getResourceType(),
                 r.getCapacity(),
-                r.getSpecs(),
+                responseSpecs,
                 r.getIsActive(),
                 r.getIsBookable(),
-                r.getPricePerNight(),
+                effectivePrice,
                 r.getCurrency(),
                 r.getCreatedAt() != null ? r.getCreatedAt().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime() : null
         );
+    }
+
+    private BigDecimal parseBigDecimal(Object value) {
+        if (value == null) return null;
+        if (value instanceof BigDecimal bd) return bd;
+        if (value instanceof Number n) return BigDecimal.valueOf(n.doubleValue());
+        try {
+            return new BigDecimal(value.toString().trim());
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

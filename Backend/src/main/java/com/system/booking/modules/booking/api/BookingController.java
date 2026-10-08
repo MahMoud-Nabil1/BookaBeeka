@@ -56,9 +56,9 @@ public class BookingController {
         return ResponseEntity.ok(Map.of("message", "Booking confirmed", "bookingId", bookingId.toString()));
     }
 
-    // cancel a booking — customer cancels own, or staff/owner cancels
+    // cancel a booking — guests can cancel their own, owners/admins can cancel for their property
     @PostMapping("/{bookingId}/cancel")
-    @PreAuthorize("hasAnyRole('CUSTOMER', 'OWNER', 'ADMIN', 'SUPER_ADMIN')")
+    @PreAuthorize("hasAnyRole('CUSTOMER', 'OWNER', 'ADMIN')")
     public ResponseEntity<CancellationResultDto> cancelBooking(
             @PathVariable UUID bookingId,
             @RequestParam(required = false) UUID tenantId,
@@ -66,22 +66,21 @@ public class BookingController {
 
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         UUID actorId = null;
-        UUID effectiveTenantId = tenantId;
-
         if (authentication != null && authentication.getPrincipal() instanceof CustomerPrincipal cp) {
             actorId = cp.id();
+            // Prevent guest from cancelling someone else's booking
+            BookingDto booking = bookingApi.getBookingById(tenantId, bookingId);
+            if (booking != null && !cp.id().equals(booking.customerId())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
         } else if (authentication != null && authentication.getPrincipal() instanceof HotelUserPrincipal hp) {
             actorId = hp.id();
-            if (effectiveTenantId == null) {
-                effectiveTenantId = hp.tenantId();
+            if (tenantId == null && hp.tenantId() != null) {
+                tenantId = hp.tenantId();
             }
-        } else if (authentication != null) {
-            try {
-                actorId = UUID.fromString(authentication.getName());
-            } catch (Exception ignored) {}
         }
 
-        CancellationResultDto result = bookingApi.cancelBooking(effectiveTenantId, bookingId, reason, actorId);
+        CancellationResultDto result = bookingApi.cancelBooking(tenantId, bookingId, reason, actorId);
         return ResponseEntity.ok(result);
     }
 

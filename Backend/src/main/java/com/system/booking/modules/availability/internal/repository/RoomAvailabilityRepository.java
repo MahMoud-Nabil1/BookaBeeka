@@ -239,4 +239,38 @@ public class RoomAvailabilityRepository {
         List<Object[]> results = query.getResultList();
         return results.isEmpty() ? java.util.Optional.empty() : java.util.Optional.of(results.get(0));
     }
+
+    /**
+     * Batch-fetches the primary photo URL for a list of room IDs in a single query.
+     *
+     * <p>Returns Object[] pairs: [0] = resource_id (UUID), [1] = secure_url (String).
+     * Only rows where {@code is_primary = true} are returned. If a room has no primary
+     * photo the room ID simply won't appear in the result — callers should default to
+     * {@code null} (which signals the frontend to use its stock-image fallback).</p>
+     *
+     * @param roomIds list of resource UUIDs (must not be empty)
+     * @return flat list of [resource_id, secure_url] pairs
+     */
+    public List<Object[]> findPrimaryPhotosByRoomIds(List<UUID> roomIds) {
+        if (roomIds == null || roomIds.isEmpty()) {
+            return List.of();
+        }
+
+        // Build the IN list as string literals — safe because these are UUIDs (no SQL injection risk)
+        String idList = roomIds.stream()
+                .map(id -> "'" + id + "'")
+                .collect(java.util.stream.Collectors.joining(", "));
+
+        String sql = """
+            SELECT resource_id, secure_url
+            FROM media_photo
+            WHERE resource_id IN (""" + idList + """
+            )
+              AND is_primary = true
+            """;
+
+        @SuppressWarnings("unchecked")
+        List<Object[]> results = entityManager.createNativeQuery(sql).getResultList();
+        return results;
+    }
 }

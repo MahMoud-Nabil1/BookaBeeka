@@ -23,5 +23,10 @@ public enum NotificationType {
     /**
      * Password reset link or token sent to a customer or staff user.
      */
-    PASSWORD_RESET
+    PASSWORD_RESET,
+
+    /**
+     * Sent to a customer and property owner when a booking is cancelled.
+     */
+    BOOKING_CANCELLED
 }

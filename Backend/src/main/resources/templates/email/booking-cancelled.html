@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="${subject}">Booking Cancelled - BookaBeeka</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: #0f172a;
+            color: #334155;
+            margin: 0;
+            padding: 0;
+            -webkit-text-size-adjust: none;
+        }
+        .container {
+            max-width: 600px;
+            margin: 40px auto;
+            background: #ffffff;
+            border-radius: 16px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .header {
+            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+            padding: 36px 32px;
+            text-align: center;
+            border-bottom: 2px solid #ef4444;
+        }
+        .header h1 {
+            color: #ffffff;
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0;
+            letter-spacing: 0.5px;
+        }
+        .header p {
+            color: #f87171;
+            font-size: 14px;
+            margin: 8px 0 0 0;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            font-weight: 600;
+        }
+        .content {
+            padding: 36px 32px;
+        }
+        .greeting {
+            font-size: 18px;
+            font-weight: 600;
+            color: #0f172a;
+            margin-bottom: 16px;
+        }
+        .lead-text {
+            font-size: 15px;
+            line-height: 1.6;
+            color: #475569;
+            margin-bottom: 28px;
+        }
+        .card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 24px;
+            margin-bottom: 28px;
+        }
+        .card-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .card-row:last-child {
+            border-bottom: none;
+        }
+        .card-label {
+            font-size: 13px;
+            color: #64748b;
+            font-weight: 500;
+        }
+        .card-value {
+            font-size: 14px;
+            color: #0f172a;
+            font-weight: 600;
+            text-align: right;
+        }
+        .badge {
+            display: inline-block;
+            background: #fee2e2;
+            color: #991b1b;
+            padding: 4px 12px;
+            border-radius: 9999px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        .footer {
+            background: #f8fafc;
+            padding: 24px 32px;
+            text-align: center;
+            border-top: 1px solid #e2e8f0;
+            font-size: 13px;
+            color: #94a3b8;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 th:text="${hotelName ?: 'BookaBeeka'}">BookaBeeka</h1>
+            <p>Reservation Cancellation</p>
+        </div>
+        <div class="content">
+            <div class="greeting" th:text="'Dear ' + ${recipientName ?: 'Valued Guest'} + ','">Dear Guest,</div>
+            <p class="lead-text">
+                Your reservation has been cancelled. Below is a summary of the cancelled booking details.
+            </p>
+
+            <div class="card">
+                <div class="card-row">
+                    <span class="card-label">Booking Reference</span>
+                    <span class="card-value" th:text="${bookingReference ?: 'N/A'}">#BKA-123456</span>
+                </div>
+                <div class="card-row" th:if="${hotelName != null}">
+                    <span class="card-label">Property</span>
+                    <span class="card-value" th:text="${hotelName}">Grand Hotel</span>
+                </div>
+                <div class="card-row" th:if="${roomName != null}">
+                    <span class="card-label">Room / Unit</span>
+                    <span class="card-value" th:text="${roomName}">Deluxe Suite</span>
+                </div>
+                <div class="card-row" th:if="${checkIn != null}">
+                    <span class="card-label">Check-In Date</span>
+                    <span class="card-value" th:text="${checkIn}">2026-10-01</span>
+                </div>
+                <div class="card-row" th:if="${checkOut != null}">
+                    <span class="card-label">Check-Out Date</span>
+                    <span class="card-value" th:text="${checkOut}">2026-10-05</span>
+                </div>
+                <div class="card-row" th:if="${cancelledBy != null}">
+                    <span class="card-label">Cancelled By</span>
+                    <span class="card-value" th:text="${cancelledBy}">Guest Request</span>
+                </div>
+                <div class="card-row" th:if="${cancelledAt != null}">
+                    <span class="card-label">Cancellation Time</span>
+                    <span class="card-value" th:text="${cancelledAt}">2026-10-08 17:30 UTC</span>
+                </div>
+                <div class="card-row" th:if="${reason != null and !#strings.isEmpty(reason)}">
+                    <span class="card-label">Reason</span>
+                    <span class="card-value" th:text="${reason}">Customer requested cancellation</span>
+                </div>
+                <div class="card-row" th:if="${refundText != null}">
+                    <span class="card-label">Refund Status</span>
+                    <span class="card-value" th:text="${refundText}">$150.00 (100% refund per policy)</span>
+                </div>
+                <div class="card-row">
+                    <span class="card-label">Status</span>
+                    <span class="badge">Cancelled</span>
+                </div>
+            </div>
+
+            <p class="lead-text" style="font-size: 13px; color: #64748b;">
+                If this cancellation was unexpected or you require further assistance, please contact support with your booking reference.
+            </p>
+        </div>
+        <div class="footer">
+            &copy; 2026 BookaBeeka Hospitality Platform. All rights reserved.
+        </div>
+    </div>
+</body>
+</html>

@@ -5,12 +5,19 @@ import com.system.booking.modules.customer.internal.dto.CustomerProfileUpdateReq
 import com.system.booking.modules.customer.internal.dto.CustomerRegisterRequest;
 import com.system.booking.modules.customer.internal.entity.Customer;
 import com.system.booking.modules.customer.internal.repository.CustomerRepository;
+import com.system.booking.modules.notification.api.event.NotificationEvent;
+import com.system.booking.modules.notification.api.model.NotificationType;
+import com.system.booking.modules.security.service.SecurityTokenStore;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -18,6 +25,7 @@ import java.util.UUID;
  */
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class CustomerService {
 
     private final CustomerRepository customerRepository;
@@ -28,11 +36,17 @@ public class CustomerService {
      */
     private final PasswordEncoder passwordEncoder;
 
+    private final ApplicationEventPublisher eventPublisher;
+    private final SecurityTokenStore tokenStore;
+
     /**
-     * Registers a new customer in the system.
+     * Registers a new customer and immediately dispatches an OTP verification email.
      *
-     * <p>Validates that the email is globally unique, hashes the plaintext password,
-     * and persists the new customer entity.</p>
+     * <p>The OTP is generated and stored <em>within</em> the current transaction so it
+     * is available when the {@code AFTER_COMMIT} event fires on the async listener.
+     * The {@link NotificationEvent} is published via Spring's
+     * {@link ApplicationEventPublisher} and handled by
+     * {@code NotificationEventListener} after the transaction commits.</p>
      *
      * @param request the validated registration data
      * @throws IllegalArgumentException if the email is already registered
@@ -56,7 +70,36 @@ public class CustomerService {
         customer.setPasswordHash(hashedPass);
 
         // Step 4: Persist to the database
-        customerRepository.save(customer);
+        Customer saved = customerRepository.save(customer);
+
+        // Step 5: Generate a 6-digit OTP and store it in the in-memory token store.
+        // Customers are cross-tenant (no tenantId), so we use the platform fallback UUID
+        // (all-zeros). AuthenticationService.verifyOtp() resolves the same key for
+        // customers by falling back to the user's tenantId (null → fallback UUID).
+        UUID platformTenantId = UUID.fromString("00000000-0000-0000-0000-000000000000");
+        String otpCode = String.format("%06d", new SecureRandom().nextInt(1_000_000));
+        tokenStore.storeOtp(saved.getEmail(), platformTenantId, saved.getId(), otpCode);
+
+        log.info("OTP stored and NotificationEvent published for new customer [{}]", saved.getEmail());
+
+        // Step 6: Publish the notification event.
+        // NotificationEventListener picks this up AFTER this transaction commits,
+        // runs async, and calls EmailSenderService → SMTP → Gmail.
+        NotificationEvent event = NotificationEvent.of(
+                platformTenantId,
+                saved.getId(),
+                null,           // bookingId: not applicable
+                NotificationType.OTP_REQUESTED,
+                "Verify your BookaBeeka account",
+                saved.getEmail(),
+                "Your one-time verification code is: " + otpCode,
+                Map.of(
+                        "otpCode", otpCode,
+                        "customerName", saved.getFirstName(),
+                        "expiryMinutes", 10
+                )
+        );
+        eventPublisher.publishEvent(event);
     }
 
     /**

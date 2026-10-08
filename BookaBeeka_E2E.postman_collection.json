@@ -97,16 +97,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/auth/register/owner",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "auth",
-                "register",
-                "owner"
-              ]
+              "raw": "{{baseUrl}}/api/auth/register/owner"
             },
             "body": {
               "mode": "raw",
@@ -136,16 +127,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/auth/login/owner",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "auth",
-                "login",
-                "owner"
-              ]
+              "raw": "{{baseUrl}}/api/auth/login/owner"
             },
             "body": {
               "mode": "raw",
@@ -180,15 +162,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/owner/admin",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "owner",
-                "admin"
-              ]
+              "raw": "{{baseUrl}}/api/owner/admin"
             },
             "body": {
               "mode": "raw",
@@ -218,16 +192,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/auth/login/admin",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "auth",
-                "login",
-                "admin"
-              ]
+              "raw": "{{baseUrl}}/api/auth/login/admin"
             },
             "body": {
               "mode": "raw",
@@ -258,16 +223,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/auth/register/customer",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "auth",
-                "register",
-                "customer"
-              ]
+              "raw": "{{baseUrl}}/api/auth/register/customer"
             },
             "body": {
               "mode": "raw",
@@ -297,16 +253,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/auth/login/customer",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "auth",
-                "login",
-                "customer"
-              ]
+              "raw": "{{baseUrl}}/api/auth/login/customer"
             },
             "body": {
               "mode": "raw",
@@ -337,16 +284,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/auth/login/super-admin",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "auth",
-                "login",
-                "super-admin"
-              ]
+              "raw": "{{baseUrl}}/api/auth/login/super-admin"
             },
             "body": {
               "mode": "raw",
@@ -377,16 +315,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/tenants/by-subdomain/grand-hotel",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "tenants",
-                "by-subdomain",
-                "grand-hotel"
-              ]
+              "raw": "{{baseUrl}}/api/tenants/by-subdomain/grand-hotel"
             }
           },
           "event": [
@@ -413,15 +342,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/owner/tenant",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "owner",
-                "tenant"
-              ]
+              "raw": "{{baseUrl}}/api/owner/tenant"
             }
           },
           "event": [
@@ -451,15 +372,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/owner/tenant",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "owner",
-                "tenant"
-              ]
+              "raw": "{{baseUrl}}/api/owner/tenant"
             },
             "body": {
               "mode": "raw",
@@ -498,21 +411,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/inventory/room-types?tenantId={{tenantId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "inventory",
-                "room-types"
-              ],
-              "query": [
-                {
-                  "key": "tenantId",
-                  "value": "{{tenantId}}"
-                }
-              ]
+              "raw": "{{baseUrl}}/api/inventory/room-types?tenantId={{tenantId}}"
             },
             "body": {
               "mode": "raw",
@@ -547,21 +446,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/inventory/resources?tenantId={{tenantId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "inventory",
-                "resources"
-              ],
-              "query": [
-                {
-                  "key": "tenantId",
-                  "value": "{{tenantId}}"
-                }
-              ]
+              "raw": "{{baseUrl}}/api/inventory/resources?tenantId={{tenantId}}"
             },
             "body": {
               "mode": "raw",
@@ -592,21 +477,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/inventory/resources?tenantId={{tenantId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "inventory",
-                "resources"
-              ],
-              "query": [
-                {
-                  "key": "tenantId",
-                  "value": "{{tenantId}}"
-                }
-              ]
+              "raw": "{{baseUrl}}/api/inventory/resources?tenantId={{tenantId}}"
             }
           },
           "event": [
@@ -637,21 +508,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/inventory/service-offerings?tenantId={{tenantId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "inventory",
-                "service-offerings"
-              ],
-              "query": [
-                {
-                  "key": "tenantId",
-                  "value": "{{tenantId}}"
-                }
-              ]
+              "raw": "{{baseUrl}}/api/inventory/service-offerings?tenantId={{tenantId}}"
             },
             "body": {
               "mode": "raw",
@@ -682,21 +539,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/inventory/service-offerings?tenantId={{tenantId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "inventory",
-                "service-offerings"
-              ],
-              "query": [
-                {
-                  "key": "tenantId",
-                  "value": "{{tenantId}}"
-                }
-              ]
+              "raw": "{{baseUrl}}/api/inventory/service-offerings?tenantId={{tenantId}}"
             }
           },
           "event": [
@@ -722,37 +565,7 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{baseUrl}}/api/availability/search?hotelId={{tenantId}}&checkIn=2026-10-01&checkOut=2026-10-05&page=0&size=20",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "availability",
-                "search"
-              ],
-              "query": [
-                {
-                  "key": "hotelId",
-                  "value": "{{tenantId}}"
-                },
-                {
-                  "key": "checkIn",
-                  "value": "2026-10-01"
-                },
-                {
-                  "key": "checkOut",
-                  "value": "2026-10-05"
-                },
-                {
-                  "key": "page",
-                  "value": "0"
-                },
-                {
-                  "key": "size",
-                  "value": "20"
-                }
-              ]
+              "raw": "{{baseUrl}}/api/availability/search?hotelId={{tenantId}}&checkIn=2026-10-01&checkOut=2026-10-05&page=0&size=20"
             }
           },
           "event": [
@@ -783,25 +596,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/availability/schedule-rules?tenantId={{tenantId}}&resourceId={{roomId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "availability",
-                "schedule-rules"
-              ],
-              "query": [
-                {
-                  "key": "tenantId",
-                  "value": "{{tenantId}}"
-                },
-                {
-                  "key": "resourceId",
-                  "value": "{{roomId}}"
-                }
-              ]
+              "raw": "{{baseUrl}}/api/availability/schedule-rules?tenantId={{tenantId}}&resourceId={{roomId}}"
             },
             "body": {
               "mode": "raw",
@@ -831,29 +626,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/availability/slots?tenantId={{tenantId}}&resourceId={{roomId}}&date=2026-10-01",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "availability",
-                "slots"
-              ],
-              "query": [
-                {
-                  "key": "tenantId",
-                  "value": "{{tenantId}}"
-                },
-                {
-                  "key": "resourceId",
-                  "value": "{{roomId}}"
-                },
-                {
-                  "key": "date",
-                  "value": "2026-10-01"
-                }
-              ]
+              "raw": "{{baseUrl}}/api/availability/slots?tenantId={{tenantId}}&resourceId={{roomId}}&date=2026-10-01"
             }
           },
           "event": [
@@ -884,25 +657,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/availability/exceptions?tenantId={{tenantId}}&resourceId={{roomId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "availability",
-                "exceptions"
-              ],
-              "query": [
-                {
-                  "key": "tenantId",
-                  "value": "{{tenantId}}"
-                },
-                {
-                  "key": "resourceId",
-                  "value": "{{roomId}}"
-                }
-              ]
+              "raw": "{{baseUrl}}/api/availability/exceptions?tenantId={{tenantId}}&resourceId={{roomId}}"
             },
             "body": {
               "mode": "raw",
@@ -945,14 +700,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/bookings",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "bookings"
-              ]
+              "raw": "{{baseUrl}}/api/bookings"
             },
             "body": {
               "mode": "raw",
@@ -983,22 +731,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/bookings/{{bookingId}}/status?tenantId={{tenantId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "bookings",
-                "{{bookingId}}",
-                "status"
-              ],
-              "query": [
-                {
-                  "key": "tenantId",
-                  "value": "{{tenantId}}"
-                }
-              ]
+              "raw": "{{baseUrl}}/api/bookings/{{bookingId}}/status?tenantId={{tenantId}}"
             }
           },
           "event": [
@@ -1024,21 +757,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/bookings/mine?tenantId={{tenantId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "bookings",
-                "mine"
-              ],
-              "query": [
-                {
-                  "key": "tenantId",
-                  "value": "{{tenantId}}"
-                }
-              ]
+              "raw": "{{baseUrl}}/api/bookings/mine?tenantId={{tenantId}}"
             }
           },
           "event": [
@@ -1074,16 +793,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/payments/wallet/top-up",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "payments",
-                "wallet",
-                "top-up"
-              ]
+              "raw": "{{baseUrl}}/api/payments/wallet/top-up"
             },
             "body": {
               "mode": "raw",
@@ -1118,16 +828,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/payments/wallet/checkout",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "payments",
-                "wallet",
-                "checkout"
-              ]
+              "raw": "{{baseUrl}}/api/payments/wallet/checkout"
             },
             "body": {
               "mode": "raw",
@@ -1158,22 +859,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/bookings/{{bookingId}}/status?tenantId={{tenantId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "bookings",
-                "{{bookingId}}",
-                "status"
-              ],
-              "query": [
-                {
-                  "key": "tenantId",
-                  "value": "{{tenantId}}"
-                }
-              ]
+              "raw": "{{baseUrl}}/api/bookings/{{bookingId}}/status?tenantId={{tenantId}}"
             }
           },
           "event": [
@@ -1199,22 +885,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/payments/wallet/balance?customerId={{customerId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "payments",
-                "wallet",
-                "balance"
-              ],
-              "query": [
-                {
-                  "key": "customerId",
-                  "value": "{{customerId}}"
-                }
-              ]
+              "raw": "{{baseUrl}}/api/payments/wallet/balance?customerId={{customerId}}"
             }
           },
           "event": [
@@ -1241,30 +912,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/payments/wallet/history?customerId={{customerId}}&page=0&size=20",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "payments",
-                "wallet",
-                "history"
-              ],
-              "query": [
-                {
-                  "key": "customerId",
-                  "value": "{{customerId}}"
-                },
-                {
-                  "key": "page",
-                  "value": "0"
-                },
-                {
-                  "key": "size",
-                  "value": "20"
-                }
-              ]
+              "raw": "{{baseUrl}}/api/payments/wallet/history?customerId={{customerId}}&page=0&size=20"
             }
           },
           "event": [
@@ -1290,17 +938,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/payments/booking/{{bookingId}}/summary",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "payments",
-                "booking",
-                "{{bookingId}}",
-                "summary"
-              ]
+              "raw": "{{baseUrl}}/api/payments/booking/{{bookingId}}/summary"
             }
           },
           "event": [
@@ -1326,22 +964,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/payments/tenant/balance?tenantId={{tenantId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "payments",
-                "tenant",
-                "balance"
-              ],
-              "query": [
-                {
-                  "key": "tenantId",
-                  "value": "{{tenantId}}"
-                }
-              ]
+              "raw": "{{baseUrl}}/api/payments/tenant/balance?tenantId={{tenantId}}"
             }
           },
           "event": [
@@ -1373,16 +996,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/bookings/{{bookingId}}/complete",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "bookings",
-                "{{bookingId}}",
-                "complete"
-              ]
+              "raw": "{{baseUrl}}/api/bookings/{{bookingId}}/complete"
             }
           },
           "event": [
@@ -1409,22 +1023,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/bookings/{{bookingId}}/status?tenantId={{tenantId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "bookings",
-                "{{bookingId}}",
-                "status"
-              ],
-              "query": [
-                {
-                  "key": "tenantId",
-                  "value": "{{tenantId}}"
-                }
-              ]
+              "raw": "{{baseUrl}}/api/bookings/{{bookingId}}/status?tenantId={{tenantId}}"
             }
           },
           "event": [
@@ -1454,14 +1053,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/reviews",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "reviews"
-              ]
+              "raw": "{{baseUrl}}/api/reviews"
             },
             "body": {
               "mode": "raw",
@@ -1492,25 +1084,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/reviews/mine?page=0&size=20",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "reviews",
-                "mine"
-              ],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "0"
-                },
-                {
-                  "key": "size",
-                  "value": "20"
-                }
-              ]
+              "raw": "{{baseUrl}}/api/reviews/mine?page=0&size=20"
             }
           },
           "event": [
@@ -1537,25 +1111,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/admin/reviews?page=0&size=20",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "admin",
-                "reviews"
-              ],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "0"
-                },
-                {
-                  "key": "size",
-                  "value": "20"
-                }
-              ]
+              "raw": "{{baseUrl}}/api/admin/reviews?page=0&size=20"
             }
           },
           "event": [
@@ -1585,17 +1141,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/admin/reviews/{{reviewId}}/reply",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "admin",
-                "reviews",
-                "{{reviewId}}",
-                "reply"
-              ]
+              "raw": "{{baseUrl}}/api/admin/reviews/{{reviewId}}/reply"
             },
             "body": {
               "mode": "raw",
@@ -1639,14 +1185,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/bookings",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "bookings"
-              ]
+              "raw": "{{baseUrl}}/api/bookings"
             },
             "body": {
               "mode": "raw",
@@ -1681,16 +1220,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/payments/wallet/checkout",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "payments",
-                "wallet",
-                "checkout"
-              ]
+              "raw": "{{baseUrl}}/api/payments/wallet/checkout"
             },
             "body": {
               "mode": "raw",
@@ -1725,17 +1255,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/payments/wallet/refund/{{bookingId2}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "payments",
-                "wallet",
-                "refund",
-                "{{bookingId2}}"
-              ]
+              "raw": "{{baseUrl}}/api/payments/wallet/refund/{{bookingId2}}"
             },
             "body": {
               "mode": "raw",
@@ -1766,22 +1286,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/bookings/{{bookingId2}}/status?tenantId={{tenantId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "bookings",
-                "{{bookingId2}}",
-                "status"
-              ],
-              "query": [
-                {
-                  "key": "tenantId",
-                  "value": "{{tenantId}}"
-                }
-              ]
+              "raw": "{{baseUrl}}/api/bookings/{{bookingId2}}/status?tenantId={{tenantId}}"
             }
           },
           "event": [
@@ -1812,15 +1317,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/owner/dashboard",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "owner",
-                "dashboard"
-              ]
+              "raw": "{{baseUrl}}/api/owner/dashboard"
             }
           },
           "event": [
@@ -1846,15 +1343,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/owner/revenue",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "owner",
-                "revenue"
-              ]
+              "raw": "{{baseUrl}}/api/owner/revenue"
             }
           },
           "event": [
@@ -1880,15 +1369,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/owner/admins",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "owner",
-                "admins"
-              ]
+              "raw": "{{baseUrl}}/api/owner/admins"
             }
           },
           "event": [
@@ -1919,16 +1400,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/admin/super/stats",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "admin",
-                "super",
-                "stats"
-              ]
+              "raw": "{{baseUrl}}/api/admin/super/stats"
             }
           },
           "event": [
@@ -1954,26 +1426,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/admin/super/tenants?page=0&size=20",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "admin",
-                "super",
-                "tenants"
-              ],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "0"
-                },
-                {
-                  "key": "size",
-                  "value": "20"
-                }
-              ]
+              "raw": "{{baseUrl}}/api/admin/super/tenants?page=0&size=20"
             }
           },
           "event": [
@@ -1999,17 +1452,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/admin/super/tenants/{{tenantId}}",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "admin",
-                "super",
-                "tenants",
-                "{{tenantId}}"
-              ]
+              "raw": "{{baseUrl}}/api/admin/super/tenants/{{tenantId}}"
             }
           },
           "event": [
@@ -2035,26 +1478,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/admin/super/customers?page=0&size=20",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "admin",
-                "super",
-                "customers"
-              ],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "0"
-                },
-                {
-                  "key": "size",
-                  "value": "20"
-                }
-              ]
+              "raw": "{{baseUrl}}/api/admin/super/customers?page=0&size=20"
             }
           },
           "event": [
@@ -2080,31 +1504,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/admin/super/bookings/stuck?thresholdMinutes=30&page=0&size=20",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "admin",
-                "super",
-                "bookings",
-                "stuck"
-              ],
-              "query": [
-                {
-                  "key": "thresholdMinutes",
-                  "value": "30"
-                },
-                {
-                  "key": "page",
-                  "value": "0"
-                },
-                {
-                  "key": "size",
-                  "value": "20"
-                }
-              ]
+              "raw": "{{baseUrl}}/api/admin/super/bookings/stuck?thresholdMinutes=30&page=0&size=20"
             }
           },
           "event": [
@@ -2130,27 +1530,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/admin/super/payments/failed?page=0&size=20",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "admin",
-                "super",
-                "payments",
-                "failed"
-              ],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "0"
-                },
-                {
-                  "key": "size",
-                  "value": "20"
-                }
-              ]
+              "raw": "{{baseUrl}}/api/admin/super/payments/failed?page=0&size=20"
             }
           },
           "event": [
@@ -2176,26 +1556,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/admin/super/transactions?page=0&size=20",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "admin",
-                "super",
-                "transactions"
-              ],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "0"
-                },
-                {
-                  "key": "size",
-                  "value": "20"
-                }
-              ]
+              "raw": "{{baseUrl}}/api/admin/super/transactions?page=0&size=20"
             }
           },
           "event": [
@@ -2221,27 +1582,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/admin/super/wallets/tenants?page=0&size=20",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "admin",
-                "super",
-                "wallets",
-                "tenants"
-              ],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "0"
-                },
-                {
-                  "key": "size",
-                  "value": "20"
-                }
-              ]
+              "raw": "{{baseUrl}}/api/admin/super/wallets/tenants?page=0&size=20"
             }
           },
           "event": [
@@ -2267,27 +1608,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/admin/super/wallets/customers?page=0&size=20",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "admin",
-                "super",
-                "wallets",
-                "customers"
-              ],
-              "query": [
-                {
-                  "key": "page",
-                  "value": "0"
-                },
-                {
-                  "key": "size",
-                  "value": "20"
-                }
-              ]
+              "raw": "{{baseUrl}}/api/admin/super/wallets/customers?page=0&size=20"
             }
           },
           "event": [
@@ -2317,18 +1638,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/admin/super/tenants/{{tenantId}}/status",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "admin",
-                "super",
-                "tenants",
-                "{{tenantId}}",
-                "status"
-              ]
+              "raw": "{{baseUrl}}/api/admin/super/tenants/{{tenantId}}/status"
             },
             "body": {
               "mode": "raw",
@@ -2362,18 +1672,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/admin/super/tenants/{{tenantId}}/status",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "admin",
-                "super",
-                "tenants",
-                "{{tenantId}}",
-                "status"
-              ]
+              "raw": "{{baseUrl}}/api/admin/super/tenants/{{tenantId}}/status"
             },
             "body": {
               "mode": "raw",
@@ -2403,18 +1702,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/admin/super/customers/{{customerId}}/ban",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "admin",
-                "super",
-                "customers",
-                "{{customerId}}",
-                "ban"
-              ]
+              "raw": "{{baseUrl}}/api/admin/super/customers/{{customerId}}/ban"
             }
           },
           "event": [
@@ -2440,18 +1728,7 @@
               }
             ],
             "url": {
-              "raw": "{{baseUrl}}/api/admin/super/customers/{{customerId}}/unban",
-              "host": [
-                "{{baseUrl}}"
-              ],
-              "path": [
-                "api",
-                "admin",
-                "super",
-                "customers",
-                "{{customerId}}",
-                "unban"
-              ]
+              "raw": "{{baseUrl}}/api/admin/super/customers/{{customerId}}/unban"
             }
           },
           "event": [

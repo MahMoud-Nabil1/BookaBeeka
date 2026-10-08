@@ -50,17 +50,31 @@ public class BookingController {
         return ResponseEntity.ok(Map.of("message", "Booking confirmed", "bookingId", bookingId.toString()));
     }
 
-    // cancel a booking — only the owner can cancel their own booking
+    // cancel a booking — guests can cancel their own, owners/admins can cancel for their property
     @PostMapping("/{bookingId}/cancel")
-    @PreAuthorize("hasRole('CUSTOMER')")
+    @PreAuthorize("hasAnyRole('CUSTOMER', 'OWNER', 'ADMIN')")
     public ResponseEntity<CancellationResultDto> cancelBooking(
             @PathVariable UUID bookingId,
             @RequestParam(required = false) UUID tenantId,
-            @RequestParam(defaultValue = "Customer requested cancellation") String reason) {
+            @RequestParam(defaultValue = "Cancellation requested") String reason) {
 
-        CustomerPrincipal customer = SecurityUtil.getCurrentCustomerPrincipal();
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        UUID actorId = null;
+        if (authentication != null && authentication.getPrincipal() instanceof CustomerPrincipal cp) {
+            actorId = cp.id();
+            // Prevent guest from cancelling someone else's booking
+            BookingDto booking = bookingApi.getBookingById(tenantId, bookingId);
+            if (booking != null && !cp.id().equals(booking.customerId())) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            }
+        } else if (authentication != null && authentication.getPrincipal() instanceof HotelUserPrincipal hp) {
+            actorId = hp.id();
+            if (tenantId == null && hp.tenantId() != null) {
+                tenantId = hp.tenantId();
+            }
+        }
 
-        CancellationResultDto result = bookingApi.cancelBooking(tenantId, bookingId, reason, customer.id());
+        CancellationResultDto result = bookingApi.cancelBooking(tenantId, bookingId, reason, actorId);
         return ResponseEntity.ok(result);
     }
 

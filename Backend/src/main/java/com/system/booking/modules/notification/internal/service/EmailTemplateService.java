@@ -71,6 +71,7 @@ public class EmailTemplateService {
             case BOOKING_CONFIRMED -> "email/booking-confirmed";
             case OTP_REQUESTED -> "email/otp-requested";
             case PASSWORD_RESET -> "email/password-reset";
+            case BOOKING_CANCELLED -> "email/booking-cancelled";
         };
     }
 }

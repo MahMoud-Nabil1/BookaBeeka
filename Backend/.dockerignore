@@ -1,0 +1,41 @@
+# ==============================================================================
+# Docker Ignore - Backend (Spring Boot 4.x / Java 21)
+# ==============================================================================
+
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# IDEs & OS metadata
+.idea
+.vscode
+*.iml
+*.iws
+*.ipr
+.DS_Store
+Thumbs.db
+
+# Secrets & Environment variables
+.env
+*.env
+.env.*
+*.env.*
+!*.env.example
+
+# Build outputs
+target/
+*.class
+*.jar
+*.war
+*.log
+
+# Developer scratch, test HTTP and manual SQL scripts
+*.http
+/*.sql
+!src/main/resources/db/migration/**
+
+# Test and documentation files not needed in production image build
+README.md
+HELP.md
+src/test/

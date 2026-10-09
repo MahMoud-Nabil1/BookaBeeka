@@ -46,6 +46,14 @@ public class AvailabilityController {
     private final AvailabilityModuleApi availabilityModuleApi;
     private final ScheduleRuleService scheduleRuleService;
     private final AvailabilityExceptionService exceptionService;
+    private final com.system.booking.modules.availability.internal.service.CatalogVersionService catalogVersionService;
+
+    // ── Public Catalog Version Tracker ───────────────────────────
+
+    @GetMapping("/catalog-version")
+    public ResponseEntity<Map<String, Object>> getCatalogVersion() {
+        return ResponseEntity.ok(Map.of("version", catalogVersionService.getVersion()));
+    }
 
     // ── Hotel Room Search (public, no auth) ──────────────────────
 

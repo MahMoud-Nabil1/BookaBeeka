@@ -16,4 +16,9 @@ import java.util.UUID;
 public record CustomerPrincipal(
         UUID id,
         String email
-) {}
+) implements java.security.Principal {
+    @Override
+    public String getName() {
+        return (email != null && !email.isBlank()) ? email : (id != null ? id.toString() : "CUSTOMER");
+    }
+}

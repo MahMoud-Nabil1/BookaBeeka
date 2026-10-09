@@ -13,4 +13,9 @@ public record HotelUserPrincipal(
         String email,
         String role,
         UUID tenantId
-) {}
+) implements java.security.Principal {
+    @Override
+    public String getName() {
+        return (email != null && !email.isBlank()) ? email : (id != null ? id.toString() : "HOTEL_USER");
+    }
+}

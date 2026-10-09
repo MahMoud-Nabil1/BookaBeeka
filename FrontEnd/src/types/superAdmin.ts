@@ -37,6 +37,11 @@ export interface TenantSummary {
   status: 'ACTIVE' | 'SUSPENDED' | 'BANNED' | string;
   currency: string;
   timezone: string;
+  ownersCount: number;
+  adminsCount: number;
+  suspendedAt?: string | null;
+  suspendedBy?: string | null;
+  suspendedReason?: string | null;
   createdAt: string;
 }
 
@@ -52,6 +57,26 @@ export interface TenantDetail {
   confirmedBookings: number;
   completedBookings: number;
   cancelledBookings: number;
+  ownersCount?: number;
+  adminsCount?: number;
+  suspendedAt?: string | null;
+  suspendedBy?: string | null;
+  suspendedReason?: string | null;
+  createdAt: string;
+}
+
+export interface CustomerSummary {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phone?: string | null;
+  isActive: boolean;
+  banned: boolean;
+  bannedAt?: string | null;
+  bannedBy?: string | null;
+  banReason?: string | null;
+  walletBalance?: number | null;
   createdAt: string;
 }
 

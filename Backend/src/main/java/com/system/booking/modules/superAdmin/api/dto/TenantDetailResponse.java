@@ -22,5 +22,11 @@ public record TenantDetailResponse(
         long completedBookings,
         long cancelledBookings,
 
+        long ownersCount,
+        long adminsCount,
+        LocalDateTime suspendedAt,
+        String suspendedBy,
+        String suspendedReason,
+
         LocalDateTime createdAt
 ) {}

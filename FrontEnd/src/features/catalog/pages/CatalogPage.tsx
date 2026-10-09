@@ -9,6 +9,7 @@ import AmenitiesFilter, { type AmenityStat } from '../components/AmenitiesFilter
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import api from '../../../config/api';
+import { useCatalogSync } from '../../../hooks/useCatalogSync';
 import type { RoomResponse, RoomTypeResponse } from '../../../types/inventory';
 
 // Sensible default amenities based on category to ensure rich filtering experience
@@ -120,6 +121,9 @@ export default function CatalogPage() {
 
   // Filter System 2: Amenities state ("What comes with the room")
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
+
+  // Automatically sync catalog when a hotel is suspended/deleted/unsuspended
+  useCatalogSync(20000);
 
   const { data: rooms, isLoading: roomsLoading, isError: roomsError } = useQuery({
     queryKey: ['available-rooms'],

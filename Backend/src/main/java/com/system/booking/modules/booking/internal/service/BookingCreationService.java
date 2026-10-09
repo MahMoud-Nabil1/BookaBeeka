@@ -13,6 +13,10 @@ import com.system.booking.modules.inventory.internal.dto.response.ServiceOfferin
 import com.system.booking.modules.customer.internal.repository.CustomerRepository;
 import com.system.booking.modules.notification.api.event.NotificationEvent;
 import com.system.booking.modules.notification.api.model.NotificationType;
+import com.system.booking.modules.booking.internal.exception.CustomerBannedException;
+import com.system.booking.modules.booking.internal.exception.HotelSuspendedException;
+import com.system.booking.modules.tenant.internal.repository.TenantRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -37,6 +41,7 @@ public class BookingCreationService {
     private final IdempotencyService idempotencyService;
     private final ApplicationEventPublisher eventPublisher;
     private final CustomerRepository customerRepo;
+    private final TenantRepository tenantRepo;
 
     @Transactional
     public BookingConfirmationDto createBooking(CreateBookingRequestDto request, UUID customerId, String idempotencyKey) {
@@ -51,6 +56,25 @@ public class BookingCreationService {
                     body.get("lockId") != null ? UUID.fromString((String) body.get("lockId")) : null,
                     OffsetDateTime.parse((String) body.get("createdAt"))
             );
+        }
+
+        // step 1b: customer ban check (must read fresh state directly from DB)
+        if (customerId != null) {
+            var customer = customerRepo.findById(customerId)
+                    .orElseThrow(() -> new EntityNotFoundException("Customer not found: " + customerId));
+            if (Boolean.TRUE.equals(customer.getBanned())) {
+                String reason = customer.getBanReason() != null && !customer.getBanReason().isBlank()
+                        ? ": " + customer.getBanReason()
+                        : ". Please contact customer support.";
+                throw new CustomerBannedException("Your account is currently banned from making bookings" + reason);
+            }
+        }
+
+        // step 1c: hotel active check (suspended or non-existent hotels cannot receive bookings)
+        var tenant = tenantRepo.findById(request.tenantId())
+                .orElseThrow(() -> new EntityNotFoundException("Hotel not found: " + request.tenantId()));
+        if (!"ACTIVE".equalsIgnoreCase(tenant.getStatus())) {
+            throw new HotelSuspendedException("This hotel is currently suspended or unavailable for bookings.");
         }
 
         // step 2: resolve dates

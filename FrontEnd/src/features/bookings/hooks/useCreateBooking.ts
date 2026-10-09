@@ -70,6 +70,12 @@ export function useCreateBooking() {
           },
           duration: 6000,
         });
+      } else if (status === 403) {
+        const msg = error?.response?.data?.message || 'Your account is banned from making room bookings.';
+        toast.error(msg, { duration: 6000 });
+      } else if (status === 409) {
+        const msg = error?.response?.data?.message || 'This hotel or room is currently unavailable for booking.';
+        toast.error(msg, { duration: 6000 });
       } else {
         const msg = error?.response?.data?.message || 'Booking failed. Please try again.';
         toast.error(msg);

@@ -11,6 +11,7 @@ import { ProductReviewsSection, StarRating, useRoomReviews } from '../../reviews
 import { useRoomAmenities } from '../hooks/useAmenities';
 import { useRoomPhotos } from '../hooks/useMedia';
 import api from '../../../config/api';
+import { useCatalogSync } from '../../../hooks/useCatalogSync';
 
 const ROOM_TYPE_PHOTOS: Record<string, string> = {
   SUITE: 'https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=1200&q=80',
@@ -44,6 +45,9 @@ export default function RoomDetailPage() {
 
   const [checkIn, setCheckIn] = useState<string>(todayStr);
   const [checkOut, setCheckOut] = useState<string>(tomorrowStr);
+
+  // Sync catalog updates automatically when a hotel status changes
+  useCatalogSync(20000);
 
   const { data: room, isLoading: roomLoading, isError: roomError } = useQuery({
     queryKey: ['room-detail', roomId],
@@ -173,10 +177,12 @@ export default function RoomDetailPage() {
       <PageLayout>
         <div className="flex flex-col items-center justify-center py-20 text-center">
           <AlertCircle className="h-12 w-12 text-destructive mb-4" />
-          <h2 className="text-2xl font-bold mb-2">Room Not Found</h2>
-          <p className="text-muted-foreground mb-6">The room you are looking for is currently not available.</p>
+          <h2 className="text-2xl font-bold mb-2">Room No Longer Available</h2>
+          <p className="text-muted-foreground max-w-md mb-6">
+            This room is no longer available. The hotel property may have been suspended, removed, or fully booked.
+          </p>
           <Button asChild>
-            <Link to="/portal/rooms">Back to Rooms</Link>
+            <Link to="/portal/rooms">Browse Available Rooms</Link>
           </Button>
         </div>
       </PageLayout>

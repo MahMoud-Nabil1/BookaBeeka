@@ -28,6 +28,8 @@ import ProfilePage from '../features/profile/pages/ProfilePage';
 // Super Admin dashboard (SUPER_ADMIN role only)
 import SuperAdminDashboardLayout from '../features/staff-dashboard/superadmin/pages/SuperAdminDashboardLayout';
 import SuperAdminOverviewPage from '../features/staff-dashboard/superadmin/pages/SuperAdminOverviewPage';
+import SuperAdminHotelsPage from '../features/staff-dashboard/superadmin/pages/SuperAdminHotelsPage';
+import SuperAdminCustomersPage from '../features/staff-dashboard/superadmin/pages/SuperAdminCustomersPage';
 import SuperAdminRoomsPage from '../features/staff-dashboard/superadmin/pages/SuperAdminRoomsPage';
 import SuperAdminBookingsPage from '../features/staff-dashboard/superadmin/pages/SuperAdminBookingsPage';
 import SuperAdminPaymentsPage from '../features/staff-dashboard/superadmin/pages/SuperAdminPaymentsPage';
@@ -118,6 +120,8 @@ export default function AppRouter() {
             <Route element={<SuperAdminDashboardLayout />}>
               <Route index element={<Navigate to="/staff/superadmin/overview" replace />} />
               <Route path="overview"  element={<SuperAdminOverviewPage />} />
+              <Route path="hotels"    element={<SuperAdminHotelsPage />} />
+              <Route path="customers" element={<SuperAdminCustomersPage />} />
               <Route path="rooms"     element={<SuperAdminRoomsPage />} />
               <Route path="bookings"  element={<SuperAdminBookingsPage />} />
               <Route path="payments"  element={<SuperAdminPaymentsPage />} />

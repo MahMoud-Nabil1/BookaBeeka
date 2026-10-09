@@ -44,6 +44,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/tenants/subdomain/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/availability/search").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/availability/rooms/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/availability/catalog-version").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/reviews/service/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/reviews/room/**").permitAll()
                         

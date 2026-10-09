@@ -50,4 +50,27 @@ public interface BookingRepository extends JpaRepository<Booking, UUID> {
 
     /** Count of bookings in a given status — used for SuperAdmin platform KPI stats. */
     long countByStatus(BookingStatus status);
+
+    @Query("""
+        SELECT b FROM Booking b
+        WHERE b.customerId = :customerId
+          AND b.status IN (com.system.booking.modules.booking.internal.entity.BookingStatus.PENDING_PAYMENT, com.system.booking.modules.booking.internal.entity.BookingStatus.CONFIRMED)
+          AND (b.checkOut >= :today OR (b.checkOut IS NULL AND b.endTime >= :now))
+        ORDER BY b.checkOut DESC NULLS LAST, b.endTime DESC
+    """)
+    List<Booking> findActiveOrUpcomingBookingsByCustomer(
+            @Param("customerId") UUID customerId,
+            @Param("today") java.time.LocalDate today,
+            @Param("now") OffsetDateTime now);
+
+    @Query("""
+        SELECT COUNT(b) FROM Booking b
+        WHERE b.tenantId = :tenantId
+          AND b.status IN (com.system.booking.modules.booking.internal.entity.BookingStatus.PENDING_PAYMENT, com.system.booking.modules.booking.internal.entity.BookingStatus.CONFIRMED)
+          AND (b.checkOut >= :today OR (b.checkOut IS NULL AND b.endTime >= :now))
+    """)
+    long countActiveOrUpcomingBookingsByTenant(
+            @Param("tenantId") UUID tenantId,
+            @Param("today") java.time.LocalDate today,
+            @Param("now") OffsetDateTime now);
 }

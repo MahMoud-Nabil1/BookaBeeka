@@ -1,0 +1,40 @@
+# ==============================================================================
+# Docker Ignore - FrontEnd (Vite / React / TypeScript)
+# ==============================================================================
+
+# Version control
+.git
+.gitignore
+
+# Dependencies & Build artifacts
+node_modules/
+dist/
+dist-ssr/
+.cache/
+
+# Package manager logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Secrets & Environment variables
+.env
+*.env
+.env.*
+*.env.*
+!*.env.example
+
+# IDEs & OS metadata
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.DS_Store
+Thumbs.db
+
+# Documentation
+README.md

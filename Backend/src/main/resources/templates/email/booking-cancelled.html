@@ -1,170 +1,242 @@
-<!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:th="http://www.thymeleaf.org" lang="en" dir="ltr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title th:text="${subject}">Booking Cancelled - BookaBeeka</title>
-    <style>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title th:text="${subject}">Reservation Cancelled - BookaBeeka</title>
+    <!--[if mso]>
+    <style type="text/css">
+        body, table, td, p, a, span { font-family: Arial, Helvetica, sans-serif !important; }
+    </style>
+    <![endif]-->
+    <style type="text/css">
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-            background-color: #0f172a;
-            color: #334155;
             margin: 0;
             padding: 0;
-            -webkit-text-size-adjust: none;
+            background-color: #f4f6f8;
+            -webkit-text-size-adjust: 100%;
+            -ms-text-size-adjust: 100%;
         }
-        .container {
-            max-width: 600px;
-            margin: 40px auto;
-            background: #ffffff;
-            border-radius: 16px;
-            overflow: hidden;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        table {
+            border-collapse: collapse;
+            mso-table-lspace: 0pt;
+            mso-table-rspace: 0pt;
         }
-        .header {
-            background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
-            padding: 36px 32px;
-            text-align: center;
-            border-bottom: 2px solid #ef4444;
+        img {
+            border: 0;
+            height: auto;
+            line-height: 100%;
+            outline: none;
+            text-decoration: none;
         }
-        .header h1 {
-            color: #ffffff;
-            font-size: 24px;
-            font-weight: 700;
-            margin: 0;
-            letter-spacing: 0.5px;
-        }
-        .header p {
-            color: #f87171;
-            font-size: 14px;
-            margin: 8px 0 0 0;
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            font-weight: 600;
-        }
-        .content {
-            padding: 36px 32px;
-        }
-        .greeting {
-            font-size: 18px;
-            font-weight: 600;
-            color: #0f172a;
-            margin-bottom: 16px;
-        }
-        .lead-text {
-            font-size: 15px;
-            line-height: 1.6;
-            color: #475569;
-            margin-bottom: 28px;
-        }
-        .card {
-            background: #f8fafc;
-            border: 1px solid #e2e8f0;
-            border-radius: 12px;
-            padding: 24px;
-            margin-bottom: 28px;
-        }
-        .card-row {
-            display: flex;
-            justify-content: space-between;
-            padding: 10px 0;
-            border-bottom: 1px solid #f1f5f9;
-        }
-        .card-row:last-child {
-            border-bottom: none;
-        }
-        .card-label {
-            font-size: 13px;
-            color: #64748b;
-            font-weight: 500;
-        }
-        .card-value {
-            font-size: 14px;
-            color: #0f172a;
-            font-weight: 600;
-            text-align: right;
-        }
-        .badge {
-            display: inline-block;
-            background: #fee2e2;
-            color: #991b1b;
-            padding: 4px 12px;
-            border-radius: 9999px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-        .footer {
-            background: #f8fafc;
-            padding: 24px 32px;
-            text-align: center;
-            border-top: 1px solid #e2e8f0;
-            font-size: 13px;
-            color: #94a3b8;
+        @media only screen and (max-width: 620px) {
+            .wrapper-table {
+                width: 100% !important;
+                padding: 12px 8px !important;
+            }
+            .content-container {
+                width: 100% !important;
+                border-radius: 8px !important;
+            }
+            .content-padding {
+                padding: 24px 20px !important;
+            }
+            .header-padding {
+                padding: 24px 20px 20px 20px !important;
+            }
+            .footer-padding {
+                padding: 20px 20px 24px 20px !important;
+            }
+            .details-cell {
+                display: block !important;
+                width: 100% !important;
+                box-sizing: border-box !important;
+            }
+            .details-value {
+                text-align: left !important;
+                padding-top: 2px !important;
+                padding-bottom: 12px !important;
+            }
         }
     </style>
 </head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1 th:text="${hotelName ?: 'BookaBeeka'}">BookaBeeka</h1>
-            <p>Reservation Cancellation</p>
-        </div>
-        <div class="content">
-            <div class="greeting" th:text="'Dear ' + ${recipientName ?: 'Valued Guest'} + ','">Dear Guest,</div>
-            <p class="lead-text">
-                Your reservation has been cancelled. Below is a summary of the cancelled booking details.
-            </p>
-
-            <div class="card">
-                <div class="card-row">
-                    <span class="card-label">Booking Reference</span>
-                    <span class="card-value" th:text="${bookingReference ?: 'N/A'}">#BKA-123456</span>
-                </div>
-                <div class="card-row" th:if="${hotelName != null}">
-                    <span class="card-label">Property</span>
-                    <span class="card-value" th:text="${hotelName}">Grand Hotel</span>
-                </div>
-                <div class="card-row" th:if="${roomName != null}">
-                    <span class="card-label">Room / Unit</span>
-                    <span class="card-value" th:text="${roomName}">Deluxe Suite</span>
-                </div>
-                <div class="card-row" th:if="${checkIn != null}">
-                    <span class="card-label">Check-In Date</span>
-                    <span class="card-value" th:text="${checkIn}">2026-10-01</span>
-                </div>
-                <div class="card-row" th:if="${checkOut != null}">
-                    <span class="card-label">Check-Out Date</span>
-                    <span class="card-value" th:text="${checkOut}">2026-10-05</span>
-                </div>
-                <div class="card-row" th:if="${cancelledBy != null}">
-                    <span class="card-label">Cancelled By</span>
-                    <span class="card-value" th:text="${cancelledBy}">Guest Request</span>
-                </div>
-                <div class="card-row" th:if="${cancelledAt != null}">
-                    <span class="card-label">Cancellation Time</span>
-                    <span class="card-value" th:text="${cancelledAt}">2026-10-08 17:30 UTC</span>
-                </div>
-                <div class="card-row" th:if="${reason != null and !#strings.isEmpty(reason)}">
-                    <span class="card-label">Reason</span>
-                    <span class="card-value" th:text="${reason}">Customer requested cancellation</span>
-                </div>
-                <div class="card-row" th:if="${refundText != null}">
-                    <span class="card-label">Refund Status</span>
-                    <span class="card-value" th:text="${refundText}">$150.00 (100% refund per policy)</span>
-                </div>
-                <div class="card-row">
-                    <span class="card-label">Status</span>
-                    <span class="badge">Cancelled</span>
-                </div>
-            </div>
-
-            <p class="lead-text" style="font-size: 13px; color: #64748b;">
-                If this cancellation was unexpected or you require further assistance, please contact support with your booking reference.
-            </p>
-        </div>
-        <div class="footer">
-            &copy; 2026 BookaBeeka Hospitality Platform. All rights reserved.
-        </div>
+<body style="margin: 0; padding: 0; background-color: #f4f6f8; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b; -webkit-font-smoothing: antialiased;">
+    <!-- Hidden Preheader -->
+    <div style="display: none; font-size: 1px; color: #f4f6f8; line-height: 1px; max-height: 0px; max-width: 0px; opacity: 0; overflow: hidden; mso-hide: all;">
+        Your reservation cancellation details and refund status for booking reference <span th:text="${bookingReference ?: ''}"></span>.
+        &#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;&#847;&zwnj;&nbsp;
     </div>
+
+    <!-- Outer Wrapper -->
+    <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" class="wrapper-table" style="background-color: #f4f6f8; margin: 0; padding: 32px 12px 48px 12px;">
+        <tr>
+            <td align="center" style="padding: 0;">
+                <!-- Main Card Container -->
+                <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" class="content-container" style="max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 12px; border: 1px solid #e2e8f0; overflow: hidden; box-shadow: 0 4px 12px rgba(15, 23, 42, 0.04);">
+                    
+                    <!-- Header -->
+                    <tr>
+                        <td class="header-padding" style="padding: 28px 32px 20px 32px; border-bottom: 1px solid #f1f5f9; background-color: #ffffff;">
+                            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                                <tr>
+                                    <td align="left" style="vertical-align: middle;">
+                                        <table role="presentation" border="0" cellpadding="0" cellspacing="0">
+                                            <tr>
+                                                <td style="vertical-align: middle;">
+                                                    <table role="presentation" border="0" cellpadding="0" cellspacing="0">
+                                                        <tr>
+                                                            <td style="background-color: #FF385C; width: 34px; height: 34px; text-align: center; vertical-align: middle; border-radius: 8px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 19px; font-weight: 800; color: #ffffff; line-height: 34px;">
+                                                                B
+                                                            </td>
+                                                        </tr>
+                                                    </table>
+                                                </td>
+                                                <td style="vertical-align: middle; padding-left: 10px;">
+                                                    <span style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; font-size: 21px; font-weight: 700; color: #0f172a; letter-spacing: -0.3px;">
+                                                        Booka<span style="color: #FF385C;">Beeka</span>
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                    </td>
+                                    <td align="right" style="vertical-align: middle;">
+                                        <span style="display: inline-block; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.8px; color: #991b1b; background-color: #fee2e2; border: 1px solid #fecaca; padding: 4px 10px; border-radius: 6px;">
+                                            Cancellation
+                                        </span>
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Body Content -->
+                    <tr>
+                        <td class="content-padding" style="padding: 32px 32px 28px 32px;">
+                            <h1 style="margin: 0 0 16px 0; font-size: 22px; font-weight: 700; color: #0f172a; line-height: 1.3;">
+                                Reservation Cancelled
+                            </h1>
+                            <p style="margin: 0 0 12px 0; font-size: 15px; font-weight: 600; color: #334155;" th:text="'Dear ' + ${recipientName ?: 'Valued Guest'} + ','">
+                                Dear Valued Guest,
+                            </p>
+                            <p style="margin: 0 0 24px 0; font-size: 15px; line-height: 1.6; color: #475569;">
+                                Your reservation has been cancelled. Below is a summary of the cancelled booking details and refund status.
+                            </p>
+
+                            <!-- Reservation Details Table -->
+                            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; margin: 0 0 24px 0;">
+                                <tr>
+                                    <td class="details-cell" style="padding: 12px 16px; font-size: 13px; font-weight: 500; color: #64748b; border-bottom: 1px solid #edf2f7; width: 38%;">
+                                        Booking Reference
+                                    </td>
+                                    <td class="details-cell details-value" align="right" style="padding: 12px 16px; font-size: 14px; font-weight: 600; color: #0f172a; border-bottom: 1px solid #edf2f7;" th:text="${bookingReference ?: 'N/A'}">
+                                        #BKA-123456
+                                    </td>
+                                </tr>
+                                <tr th:if="${hotelName != null and !#strings.isEmpty(hotelName)}">
+                                    <td class="details-cell" style="padding: 12px 16px; font-size: 13px; font-weight: 500; color: #64748b; border-bottom: 1px solid #edf2f7;">
+                                        Property
+                                    </td>
+                                    <td class="details-cell details-value" align="right" style="padding: 12px 16px; font-size: 14px; font-weight: 600; color: #0f172a; border-bottom: 1px solid #edf2f7;" th:text="${hotelName}">
+                                        Grand Hotel
+                                    </td>
+                                </tr>
+                                <tr th:if="${roomName != null and !#strings.isEmpty(roomName)}">
+                                    <td class="details-cell" style="padding: 12px 16px; font-size: 13px; font-weight: 500; color: #64748b; border-bottom: 1px solid #edf2f7;">
+                                        Room / Unit
+                                    </td>
+                                    <td class="details-cell details-value" align="right" style="padding: 12px 16px; font-size: 14px; font-weight: 600; color: #0f172a; border-bottom: 1px solid #edf2f7;" th:text="${roomName}">
+                                        Deluxe Suite
+                                    </td>
+                                </tr>
+                                <tr th:if="${checkIn != null and !#strings.isEmpty(checkIn)}">
+                                    <td class="details-cell" style="padding: 12px 16px; font-size: 13px; font-weight: 500; color: #64748b; border-bottom: 1px solid #edf2f7;">
+                                        Check-In Date
+                                    </td>
+                                    <td class="details-cell details-value" align="right" style="padding: 12px 16px; font-size: 14px; font-weight: 600; color: #0f172a; border-bottom: 1px solid #edf2f7;" th:text="${checkIn}">
+                                        2026-10-01
+                                    </td>
+                                </tr>
+                                <tr th:if="${checkOut != null and !#strings.isEmpty(checkOut)}">
+                                    <td class="details-cell" style="padding: 12px 16px; font-size: 13px; font-weight: 500; color: #64748b; border-bottom: 1px solid #edf2f7;">
+                                        Check-Out Date
+                                    </td>
+                                    <td class="details-cell details-value" align="right" style="padding: 12px 16px; font-size: 14px; font-weight: 600; color: #0f172a; border-bottom: 1px solid #edf2f7;" th:text="${checkOut}">
+                                        2026-10-05
+                                    </td>
+                                </tr>
+                                <tr th:if="${cancelledBy != null and !#strings.isEmpty(cancelledBy)}">
+                                    <td class="details-cell" style="padding: 12px 16px; font-size: 13px; font-weight: 500; color: #64748b; border-bottom: 1px solid #edf2f7;">
+                                        Cancelled By
+                                    </td>
+                                    <td class="details-cell details-value" align="right" style="padding: 12px 16px; font-size: 14px; font-weight: 600; color: #0f172a; border-bottom: 1px solid #edf2f7;" th:text="${cancelledBy}">
+                                        Guest Request
+                                    </td>
+                                </tr>
+                                <tr th:if="${cancelledAt != null and !#strings.isEmpty(cancelledAt)}">
+                                    <td class="details-cell" style="padding: 12px 16px; font-size: 13px; font-weight: 500; color: #64748b; border-bottom: 1px solid #edf2f7;">
+                                        Cancellation Time
+                                    </td>
+                                    <td class="details-cell details-value" align="right" style="padding: 12px 16px; font-size: 14px; font-weight: 600; color: #0f172a; border-bottom: 1px solid #edf2f7;" th:text="${cancelledAt}">
+                                        2026-10-08 17:30 UTC
+                                    </td>
+                                </tr>
+                                <tr th:if="${reason != null and !#strings.isEmpty(reason)}">
+                                    <td class="details-cell" style="padding: 12px 16px; font-size: 13px; font-weight: 500; color: #64748b; border-bottom: 1px solid #edf2f7;">
+                                        Reason
+                                    </td>
+                                    <td class="details-cell details-value" align="right" style="padding: 12px 16px; font-size: 14px; font-weight: 600; color: #0f172a; border-bottom: 1px solid #edf2f7;" th:text="${reason}">
+                                        Customer requested cancellation
+                                    </td>
+                                </tr>
+                                <tr th:if="${refundText != null and !#strings.isEmpty(refundText)}">
+                                    <td class="details-cell" style="padding: 12px 16px; font-size: 13px; font-weight: 500; color: #64748b; border-bottom: 1px solid #edf2f7;">
+                                        Refund Status
+                                    </td>
+                                    <td class="details-cell details-value" align="right" style="padding: 12px 16px; font-size: 14px; font-weight: 600; color: #0f172a; border-bottom: 1px solid #edf2f7;" th:text="${refundText}">
+                                        $ 150.00 (100% refund per policy)
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <td class="details-cell" style="padding: 12px 16px; font-size: 13px; font-weight: 500; color: #64748b;">
+                                        Status
+                                    </td>
+                                    <td class="details-cell details-value" align="right" style="padding: 12px 16px;">
+                                        <span style="display: inline-block; background-color: #fee2e2; color: #991b1b; padding: 4px 12px; border-radius: 9999px; font-size: 12px; font-weight: 600;">
+                                            Cancelled
+                                        </span>
+                                    </td>
+                                </tr>
+                            </table>
+
+                            <!-- Helpful Note -->
+                            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border-left: 3px solid #64748b; border-radius: 0 6px 6px 0; margin: 0;">
+                                <tr>
+                                    <td style="padding: 12px 16px; font-size: 13px; line-height: 1.5; color: #64748b;">
+                                        If this cancellation was unexpected or you require further assistance with a future reservation, please contact support with your booking reference.
+                                    </td>
+                                </tr>
+                            </table>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td class="footer-padding" style="padding: 24px 32px 28px 32px; background-color: #f8fafc; border-top: 1px solid #e2e8f0; text-align: center;">
+                            <p style="margin: 0 0 6px 0; font-size: 13px; font-weight: 600; color: #475569;">
+                                BookaBeeka Hospitality Platform
+                            </p>
+                            <p style="margin: 0 0 10px 0; font-size: 12px; line-height: 1.5; color: #94a3b8;">
+                                This is an automated message. Please do not reply directly to this email.
+                            </p>
+                            <p style="margin: 0; font-size: 12px; color: #94a3b8;">
+                                &copy; 2026 BookaBeeka. All rights reserved.
+                            </p>
+                        </td>
+                    </tr>
+
+                </table>
+            </td>
+        </tr>
+    </table>
 </body>
 </html>

@@ -1,0 +1,43 @@
+# ==========================================
+# Server & Environment
+# ==========================================
+SERVER_PORT=8081
+SPRING_PROFILES_ACTIVE=dev
+
+# ==========================================
+# Neon PostgreSQL Database
+# ==========================================
+SPRING_DATASOURCE_URL=jdbc:postgresql://ep-still-hill-ax65n74w-pooler.c-4.us-east-2.aws.neon.tech:5432/neondb?sslmode=require
+SPRING_DATASOURCE_USERNAME=neondb_owner
+SPRING_DATASOURCE_PASSWORD=npg_vrP2ONMthD4z
+
+# ==========================================
+# Cloudinary Media Storage
+# ==========================================
+CLOUDINARY_CLOUD_NAME=dnskzfbjx
+CLOUDINARY_API_KEY=496443482983932
+CLOUDINARY_API_SECRET=fxHr5AsGbBnzVrYyVRvAyjkIEnM
+
+# ==========================================
+# JWT Security
+# ==========================================
+JWT_SECRET_KEY=404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+JWT_EXPIRATION_TIME=86400000
+
+# ==========================================
+# Mail Configuration (Gmail SMTP)
+# ==========================================
+SPRING_MAIL_HOST=smtp.gmail.com
+SPRING_MAIL_PORT=587
+SPRING_MAIL_USERNAME=ma77moud0@gmail.com
+SPRING_MAIL_PASSWORD=xgphdswjvypmwpxu
+SPRING_MAIL_SMTP_AUTH=true
+SPRING_MAIL_SMTP_STARTTLS_ENABLE=true
+APP_MAIL_ENABLED=true
+
+# ==========================================
+# Application & Media Settings
+# ==========================================
+APP_BASE_URL=http://localhost:5173
+MEDIA_MAX_PHOTOS=20
+MEDIA_MAX_FILE_SIZE=10485760

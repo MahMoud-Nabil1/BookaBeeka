@@ -1,1 +1,1 @@
-Hello, This is BookaBeeka a generic booking system
+Hello, This is BookaBeeka a hotel booking system

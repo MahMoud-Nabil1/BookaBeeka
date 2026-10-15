@@ -9,9 +9,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
-import java.sql.Timestamp;
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -116,26 +114,26 @@ public class RoomAvailabilityRepository {
 
         // No overlapping confirmed/pending bookings
         sql.append("""
-              AND NOT EXISTS (
+              AND (CAST(:checkIn AS text) IS NULL OR CAST(:checkOut AS text) IS NULL OR NOT EXISTS (
                   SELECT 1 FROM booking b
                   WHERE b.resource_id = r.id
                     AND b.status IN ('PENDING_PAYMENT', 'CONFIRMED')
                     AND b.check_in  IS NOT NULL
                     AND b.check_in  < CAST(:checkOut AS date)
                     AND b.check_out > CAST(:checkIn  AS date)
-              )
+              ))
             """);
 
         // No overlapping room blocks
         sql.append("""
-              AND NOT EXISTS (
+              AND (CAST(:checkIn AS text) IS NULL OR CAST(:checkOut AS text) IS NULL OR NOT EXISTS (
                   SELECT 1 FROM availability_exceptions ae
                   WHERE ae.resource_id = r.id
                     AND ae.is_available = false
                     AND ae.start_date IS NOT NULL
                     AND ae.start_date < CAST(:checkOut AS date)
                     AND ae.end_date   > CAST(:checkIn  AS date)
-              )
+              ))
             """);
 
         return sql.toString();
@@ -156,8 +154,8 @@ public class RoomAvailabilityRepository {
 
         // Pass as strings so PostgreSQL CAST(:x AS date/uuid) bindings work correctly
         query.setParameter("hotelId",      hotelId != null ? hotelId.toString() : null);
-        query.setParameter("checkIn",      checkIn.toString());
-        query.setParameter("checkOut",     checkOut.toString());
+        query.setParameter("checkIn",      checkIn != null ? checkIn.toString() : null);
+        query.setParameter("checkOut",     checkOut != null ? checkOut.toString() : null);
         query.setParameter("roomType",     roomType);
         query.setParameter("minCapacity",  minCapacity != null ? minCapacity.toString() : null);
         query.setParameter("bedType",      bedType);
@@ -201,6 +199,40 @@ public class RoomAvailabilityRepository {
         query.setParameter("checkOut", checkOut);
 
         return (Boolean) query.getSingleResult();
+    }
+
+    /**
+     * Acquires a pessimistic row-level lock on the resource row for the given room ID.
+     *
+     * <p>Uses {@code SELECT ... FOR UPDATE SKIP LOCKED} so that:
+     * <ul>
+     *   <li>Concurrent booking requests for the <em>same room</em> are serialized — only one
+     *       thread holds the lock at a time, preventing the check-then-act race condition.</li>
+     *   <li>Requests for <em>different rooms</em> are never blocked by each other.</li>
+     *   <li>If another transaction already holds the lock, {@code SKIP LOCKED} returns no rows
+     *       immediately rather than waiting — the caller interprets this as unavailable.</li>
+     * </ul>
+     *
+     * @param resourceId the room UUID to lock
+     * @return {@code true} if the lock was acquired (room exists and is bookable);
+     *         {@code false} if another transaction holds the lock or the room does not exist
+     */
+    public boolean lockResourceForBooking(UUID resourceId) {
+        // SELECT FOR UPDATE SKIP LOCKED — serializes concurrent booking attempts for the same room
+        String sql = """
+            SELECT id FROM resource
+            WHERE id = CAST(:resourceId AS uuid)
+              AND is_active   = true
+              AND is_bookable = true
+            FOR UPDATE SKIP LOCKED
+            """;
+        Query query = entityManager.createNativeQuery(sql);
+        query.setParameter("resourceId", resourceId.toString());
+
+        @SuppressWarnings("unchecked")
+        List<?> rows = query.getResultList();
+        // If another transaction holds the lock, SKIP LOCKED returns an empty result set
+        return !rows.isEmpty();
     }
 
     /**

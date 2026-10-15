@@ -28,4 +28,13 @@ public class CustomerSecurityAdapter implements CustomerAuthPort {
             repository.save(c);
         });
     }
+
+    @Override
+    @Transactional
+    public void activateCustomer(UUID customerId) {
+        repository.findById(customerId).ifPresent(c -> {
+            c.setIsActive(true);
+            repository.save(c);
+        });
+    }
 }

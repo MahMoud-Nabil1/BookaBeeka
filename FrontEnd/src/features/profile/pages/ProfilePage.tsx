@@ -1,16 +1,29 @@
 import { useState, useEffect } from 'react';
-import { useAppSelector } from '../../../redux/hooks';
+import { useNavigate } from 'react-router-dom';
+import { useAppSelector, useAppDispatch } from '../../../redux/hooks';
 import { selectUserType } from '../../../redux/selectors/authSelectors';
+import { logout } from '../../../redux/slices/authSlice';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { 
   User, Mail, Shield, ShieldCheck, Loader2, KeyRound, 
   Eye, EyeOff, Copy, Check, Calendar, AlertCircle, 
-  Pencil, Lock, RefreshCw, ArrowRight
+  Pencil, Lock, RefreshCw, ArrowRight, Trash2
 } from 'lucide-react';
 import api from '../../../config/api';
 import { toast } from 'sonner';
@@ -28,6 +41,8 @@ interface UserProfile {
 
 export default function ProfilePage() {
   const userType = useAppSelector(selectUserType);
+  const dispatch = useAppDispatch();
+  const navigate = useNavigate();
   
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -58,6 +73,9 @@ export default function ProfilePage() {
   // Reset link via email state
   const [isSendingResetLink, setIsSendingResetLink] = useState(false);
   const [resetEmailSent, setResetEmailSent] = useState(false);
+
+  // Account deletion state
+  const [isDeletingAccount, setIsDeletingAccount] = useState(false);
 
   useEffect(() => {
     fetchProfile();
@@ -192,6 +210,24 @@ export default function ProfilePage() {
       toast.error(error.response?.data?.message || 'Failed to dispatch reset email. Please try again.');
     } finally {
       setIsSendingResetLink(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    try {
+      setIsDeletingAccount(true);
+      await api.delete('/api/customers/account');
+      toast.success('Your account has been successfully deleted. You will be logged out now.');
+      setTimeout(() => {
+        dispatch(logout());
+        navigate('/');
+      }, 1800);
+    } catch (error: any) {
+      console.error('Account deletion failed:', error);
+      const msg = error.response?.data?.message || 'Failed to delete account. Please try again.';
+      toast.error(msg);
+    } finally {
+      setIsDeletingAccount(false);
     }
   };
 
@@ -719,6 +755,94 @@ export default function ProfilePage() {
                 </Link>
               </div>
             )}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* ── Danger Zone ─────────────────────────────────────────────── */}
+      <Card className="border border-destructive/30 shadow-sm overflow-hidden" id="danger-zone-card">
+        <CardHeader className="bg-destructive/5 border-b border-destructive/20 pb-4">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 rounded-md bg-destructive/10">
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </div>
+            <div>
+              <CardTitle className="text-base font-semibold text-destructive">Danger Zone</CardTitle>
+              <CardDescription className="text-xs text-muted-foreground mt-0.5">
+                Irreversible and destructive actions
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-5 pb-6 px-6 sm:px-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <p className="text-sm font-medium text-foreground">Delete My Account</p>
+              <p className="text-xs text-muted-foreground max-w-md">
+                Permanently deactivates your account. Your profile details will be anonymized.
+                Historical booking and payment records are preserved for hotel accounting purposes.
+                This action <strong>cannot be undone</strong>.
+              </p>
+              <ul className="mt-2 space-y-1 text-xs text-muted-foreground list-disc list-inside">
+                <li>You must have no active or upcoming reservations</li>
+                <li>Your wallet balance must be zero</li>
+                <li>You will be immediately logged out</li>
+              </ul>
+            </div>
+
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <Button
+                  id="delete-account-trigger-btn"
+                  variant="destructive"
+                  size="sm"
+                  className="shrink-0 gap-2"
+                  disabled={isDeletingAccount}
+                >
+                  {isDeletingAccount ? (
+                    <><Loader2 className="h-3.5 w-3.5 animate-spin" />Deleting...</>
+                  ) : (
+                    <><Trash2 className="h-3.5 w-3.5" />Delete Account</>
+                  )}
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle className="text-destructive flex items-center gap-2">
+                    <Trash2 className="h-5 w-5" />
+                    Delete Your Account?
+                  </AlertDialogTitle>
+                  <AlertDialogDescription asChild>
+                    <div className="space-y-3 text-sm text-muted-foreground">
+                      <p>
+                        This will <strong className="text-foreground">permanently deactivate</strong> your account. You will be logged out immediately and will not be able to use this account again.
+                      </p>
+                      <div className="p-3 rounded-md bg-amber-500/10 border border-amber-500/20 text-amber-700 dark:text-amber-400 text-xs space-y-1">
+                        <p className="font-semibold">Before deleting, make sure:</p>
+                        <ul className="list-disc list-inside space-y-0.5">
+                          <li>You have no active or upcoming reservations</li>
+                          <li>Your wallet balance is zero</li>
+                        </ul>
+                      </div>
+                      <p className="text-xs">
+                        Historical booking and payment records will be retained for hotel accounting.
+                        Your personal data will be anonymized.
+                      </p>
+                    </div>
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel id="delete-account-cancel-btn">Cancel</AlertDialogCancel>
+                  <AlertDialogAction
+                    id="delete-account-confirm-btn"
+                    onClick={handleDeleteAccount}
+                    className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  >
+                    Yes, delete my account
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
           </div>
         </CardContent>
       </Card>

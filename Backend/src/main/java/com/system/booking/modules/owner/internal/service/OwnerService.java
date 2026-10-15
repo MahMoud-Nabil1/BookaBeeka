@@ -100,6 +100,11 @@ public class OwnerService {
         return reportingRepository.listTenantAdmins(tenantId);
     }
 
+    @Transactional
+    public void removeAdmin(UUID tenantId, UUID adminId, UUID currentUserId) {
+        hotelAdminPort.removeAdmin(tenantId, adminId, currentUserId);
+    }
+
     /**
      * Returns dashboard stats for an owner (revenue, bookings, admins, wallet).
      * Cached for 5 minutes — involves 4 separate DB queries; slight staleness is acceptable.

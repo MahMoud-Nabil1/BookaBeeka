@@ -63,8 +63,6 @@ export default function RoomDetailPage() {
         try {
           const res = await api.get('/api/availability/search', {
             params: {
-              checkIn: todayStr,
-              checkOut: tomorrowStr,
               page: 0,
               size: 100,
             },

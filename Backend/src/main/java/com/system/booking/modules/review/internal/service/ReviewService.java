@@ -139,10 +139,21 @@ public class ReviewService {
             }
         }
 
+        UUID roomId = r.getRoomId();
+        if (roomId == null && r.getBookingId() != null) {
+            try {
+                BookingDto booking = bookingApi.getBookingById(r.getTenantId(), r.getBookingId());
+                if (booking != null && booking.roomId() != null) {
+                    roomId = booking.roomId();
+                }
+            } catch (Exception ignored) {
+            }
+        }
+
         return new ReviewResponseDto(
                 r.getId(), r.getTenantId(), r.getBookingId(), r.getCustomerId(),
                 firstName, lastName,
-                r.getServiceId(), r.getRoomId(), r.getStaffId(),
+                r.getServiceId(), roomId, r.getStaffId(),
                 r.getRating(), r.getComment(), r.getIsVerified(),
                 r.getReply(), r.getRepliedBy(), r.getRepliedByRole(), r.getRepliedAt(),
                 r.getCreatedAt(), r.getUpdatedAt());

@@ -88,10 +88,29 @@ export default function RoomDetailPage() {
         roomCategory: found.room?.roomType || found.roomInfo?.roomType || 'Standard Room',
         capacity: found.room?.capacity || found.roomInfo?.capacity || 2,
         bedType: found.room?.bedType || found.room?.specs?.bedType || 'Queen',
+        description: (() => {
+          const direct = found.room?.description || found.roomInfo?.description || found.description;
+          if (direct && typeof direct === 'string') return direct;
+          const s = found.room?.specs || found.roomInfo?.specs || found.specs;
+          if (!s) return '';
+          if (typeof s === 'object' && s.description) return String(s.description);
+          if (typeof s === 'string') {
+            try {
+              const parsed = JSON.parse(s);
+              if (parsed?.description) return String(parsed.description);
+            } catch {
+              const match = s.match(/"description"\s*:\s*"([^"]+)"/);
+              if (match?.[1]) return match[1];
+            }
+          }
+          return '';
+        })(),
         amenities:
           found.room?.amenities && found.room.amenities.length > 0
             ? found.room.amenities
-            : found.room?.specs?.amenities || ['Free WiFi', 'Air Conditioning', 'Flat-screen TV'],
+            : found.roomInfo?.amenities && found.roomInfo.amenities.length > 0
+            ? found.roomInfo.amenities
+            : found.room?.specs?.amenities || [],
         specs: found.room?.specs || found.roomInfo?.specs || {},
         price: found.pricing?.pricePerNight ?? 150,
         currency: found.pricing?.currency || 'USD',
@@ -104,6 +123,29 @@ export default function RoomDetailPage() {
   const { data: reviewsData } = useRoomReviews(room?.id, room?.tenantId);
   const { data: roomAmenities = [] } = useRoomAmenities(room?.id || '');
   const { data: roomPhotos = [] } = useRoomPhotos(room?.id);
+
+  // Default baseline amenities that every room offers + any room-specific amenities
+  const DEFAULT_AMENITIES = ['Free WiFi', 'Air Conditioning'];
+
+  // Collect all unique amenity names
+  const dynamicAmenityNames: string[] =
+    roomAmenities.length > 0
+      ? roomAmenities.map((a) => a.name)
+      : (room?.amenities || []);
+
+  const mergedNames: string[] = Array.from(
+    new Set([...DEFAULT_AMENITIES, ...dynamicAmenityNames])
+  );
+
+  const displayedAmenities = mergedNames.map((name, idx) => {
+    const matched = roomAmenities.find((a) => a.name.toLowerCase() === name.toLowerCase());
+    return {
+      id: matched?.id || `amenity-${idx}`,
+      name,
+      icon: matched?.icon || null,
+    };
+  });
+
   const reviewsList = reviewsData?.content || [];
   const reviewCount = reviewsData?.totalElements || 0;
   const averageRating: number | null =
@@ -299,8 +341,9 @@ export default function RoomDetailPage() {
               )}
             </div>
 
-            <p className="text-lg text-muted-foreground mb-6">
-              Comfortable accommodation designed for your stay, fully equipped with modern conveniences.
+            <p className="text-lg text-muted-foreground mb-6 whitespace-pre-line">
+              {room.description?.trim() ||
+                'Comfortable accommodation designed for your stay, fully equipped with modern conveniences.'}
             </p>
 
             {/* Quick Specs Cards */}
@@ -333,13 +376,13 @@ export default function RoomDetailPage() {
             </div>
 
             {/* Amenities Section */}
-            {roomAmenities.length > 0 && (
+            {displayedAmenities.length > 0 && (
               <div className="space-y-3 mb-8">
                 <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
                   <Sparkles className="h-5 w-5 text-primary" /> Included Amenities
                 </h2>
                 <div className="flex flex-wrap gap-2">
-                  {roomAmenities.map((amenity) => (
+                  {displayedAmenities.map((amenity: { id: string; name: string; icon?: string | null }) => (
                     <Badge key={amenity.id} variant="outline" className="px-3 py-1 text-sm bg-muted/30">
                       {amenity.icon && <span className="mr-1">{amenity.icon}</span>}
                       {amenity.name}

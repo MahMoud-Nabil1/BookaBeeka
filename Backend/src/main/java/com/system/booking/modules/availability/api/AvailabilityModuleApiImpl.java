@@ -45,6 +45,7 @@ public class AvailabilityModuleApiImpl implements AvailabilityModuleApi {
     private final InventoryModuleApi inventoryApi;
     private final RoomAvailabilityRepository roomAvailabilityRepository;
     private final ResourceAmenityRepository resourceAmenityRepository;
+    private final com.fasterxml.jackson.databind.ObjectMapper objectMapper = new com.fasterxml.jackson.databind.ObjectMapper();
 
     // ── Legacy slot-based methods (untouched) ──────────────────────────────────
 
@@ -282,12 +283,21 @@ public class AvailabilityModuleApiImpl implements AvailabilityModuleApi {
             }
         } else if (row[4] != null) {
             String specsStr = row[4].toString();
-            if (specsStr.contains("\"bedType\"")) {
-                int idx   = specsStr.indexOf("\"bedType\"");
-                int start = specsStr.indexOf("\"", idx + 10) + 1;
-                int end   = specsStr.indexOf("\"", start);
-                if (start > 0 && end > start) {
-                    bedType = specsStr.substring(start, end);
+            try {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> parsed = objectMapper.readValue(specsStr, Map.class);
+                specs = parsed;
+                if (specs.get("bedType") != null) {
+                    bedType = specs.get("bedType").toString();
+                }
+            } catch (Exception ignored) {
+                if (specsStr.contains("\"bedType\"")) {
+                    int idx   = specsStr.indexOf("\"bedType\"");
+                    int start = specsStr.indexOf("\"", idx + 10) + 1;
+                    int end   = specsStr.indexOf("\"", start);
+                    if (start > 0 && end > start) {
+                        bedType = specsStr.substring(start, end);
+                    }
                 }
             }
         }

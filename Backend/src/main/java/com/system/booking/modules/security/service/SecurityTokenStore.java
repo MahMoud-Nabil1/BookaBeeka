@@ -56,6 +56,18 @@ public class SecurityTokenStore {
 
     private final Map<String, OtpEntry> otpStore = new ConcurrentHashMap<>();
     private final Map<String, PasswordResetEntry> resetTokenStore = new ConcurrentHashMap<>();
+    private final java.util.Set<UUID> deactivatedUsers = ConcurrentHashMap.newKeySet();
+
+    public void markUserDeactivated(UUID userId) {
+        if (userId != null) {
+            deactivatedUsers.add(userId);
+            log.info("User [{}] marked as deactivated in SecurityTokenStore", userId);
+        }
+    }
+
+    public boolean isUserDeactivated(UUID userId) {
+        return userId != null && deactivatedUsers.contains(userId);
+    }
 
     // -------------------------------------------------------------------------
     // OTP Operations
@@ -171,6 +183,7 @@ public class SecurityTokenStore {
     public void clear() {
         otpStore.clear();
         resetTokenStore.clear();
+        deactivatedUsers.clear();
     }
 
     private String buildOtpKey(String email, UUID tenantId) {

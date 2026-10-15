@@ -31,4 +31,13 @@ public class HotelAdminController {
             @Valid @RequestBody UpdateHotelAdminProfileRequest request) {
         return ResponseEntity.ok(hotelAdminService.updateProfile(principal.id(), principal.tenantId(), request));
     }
+
+    @DeleteMapping({"/admins/{adminId}", "/{adminId}"})
+    @PreAuthorize("hasAnyRole('ADMIN', 'OWNER')")
+    public ResponseEntity<java.util.Map<String, String>> removeAdmin(
+            @AuthenticationPrincipal HotelUserPrincipal principal,
+            @PathVariable java.util.UUID adminId) {
+        hotelAdminService.removeAdmin(principal.tenantId(), adminId, principal.id());
+        return ResponseEntity.ok(java.util.Map.of("message", "Admin removed successfully"));
+    }
 }

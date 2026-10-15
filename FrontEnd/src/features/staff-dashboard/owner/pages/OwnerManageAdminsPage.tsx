@@ -3,7 +3,8 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, UserCheck, UserX } from 'lucide-react';
+import { Plus, UserCheck, UserX, Trash2, Loader2 } from 'lucide-react';
+import { toast } from 'sonner';
 import PageLayout from '../../../../components/layout/PageLayout';
 import { Button } from '../../../../components/ui/button';
 import { Input } from '../../../../components/ui/input';
@@ -25,6 +26,16 @@ import {
   DialogTitle,
 } from '../../../../components/ui/dialog';
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '../../../../components/ui/alert-dialog';
+import {
   Form,
   FormControl,
   FormField,
@@ -32,7 +43,7 @@ import {
   FormLabel,
   FormMessage,
 } from '../../../../components/ui/form';
-import { ownerApi, type AppointAdminRequest } from '../../api/ownerApi';
+import { ownerApi, type AppointAdminRequest, type OwnerAdminSummary } from '../../api/ownerApi';
 
 // ── Validation schema ────────────────────────────────────────────────────────
 
@@ -50,6 +61,7 @@ type CreateAdminFormValues = z.infer<typeof createAdminSchema>;
 
 export default function OwnerManageAdminsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [adminToDelete, setAdminToDelete] = useState<OwnerAdminSummary | null>(null);
   const queryClient = useQueryClient();
 
   const { data: admins = [], isLoading } = useQuery({
@@ -63,6 +75,24 @@ export default function OwnerManageAdminsPage() {
       queryClient.invalidateQueries({ queryKey: ['owner-admins'] });
       setDialogOpen(false);
       form.reset();
+      toast.success('Admin appointed successfully');
+    },
+    onError: (err: any) => {
+      const msg = err.response?.data?.message || 'Failed to create admin';
+      toast.error(msg);
+    },
+  });
+
+  const { mutate: removeAdmin, isPending: isRemoving } = useMutation({
+    mutationFn: (adminId: string) => ownerApi.removeAdmin(adminId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['owner-admins'] });
+      toast.success('Admin removed successfully');
+      setAdminToDelete(null);
+    },
+    onError: (err: any) => {
+      const msg = err.response?.data?.message || err.response?.data?.details || 'Failed to remove admin';
+      toast.error(msg);
     },
   });
 
@@ -124,6 +154,7 @@ export default function OwnerManageAdminsPage() {
                   <TableHead>Phone</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Created</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -152,6 +183,19 @@ export default function OwnerManageAdminsPage() {
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
                       {new Date(admin.createdAt).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive hover:bg-destructive/10 hover:text-destructive h-8 px-2"
+                        onClick={() => setAdminToDelete(admin)}
+                        disabled={!admin.isActive}
+                        title={admin.isActive ? 'Remove Admin' : 'Admin is already inactive'}
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        Remove
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
@@ -262,6 +306,42 @@ export default function OwnerManageAdminsPage() {
           </Form>
         </DialogContent>
       </Dialog>
+
+      {/* Remove Admin Confirmation Alert Dialog */}
+      <AlertDialog open={!!adminToDelete} onOpenChange={(open) => !open && setAdminToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove Admin Account</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to remove <span className="font-semibold text-foreground">{adminToDelete?.firstName} {adminToDelete?.lastName}</span> ({adminToDelete?.email})?
+              <br /><br />
+              This will deactivate the admin's account immediately. They will no longer be able to log in or manage hotel bookings and inventory. Historical audit records will be safely preserved.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isRemoving}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+              disabled={isRemoving}
+              onClick={(e) => {
+                e.preventDefault();
+                if (adminToDelete) {
+                  removeAdmin(adminToDelete.id);
+                }
+              }}
+            >
+              {isRemoving ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Removing…
+                </>
+              ) : (
+                'Remove Admin'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </PageLayout>
   );
 }

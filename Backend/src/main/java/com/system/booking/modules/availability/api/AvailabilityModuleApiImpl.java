@@ -152,9 +152,13 @@ public class AvailabilityModuleApiImpl implements AvailabilityModuleApi {
                 pageable
         );
 
+        LocalDate in = request.checkIn() != null ? request.checkIn() : LocalDate.now();
+        LocalDate out = request.checkOut() != null ? request.checkOut() : in.plusDays(1);
+        long nights = Math.max(1, ChronoUnit.DAYS.between(in, out));
+
         if (rawResults.isEmpty()) {
-            return rawResults.map(row -> mapToResponse(row, request.checkIn(), request.checkOut(),
-                    ChronoUnit.DAYS.between(request.checkIn(), request.checkOut()),
+            return rawResults.map(row -> mapToResponse(row, in, out,
+                    nights,
                     Collections.emptyMap(), Collections.emptyMap()));
         }
 
@@ -169,10 +173,8 @@ public class AvailabilityModuleApiImpl implements AvailabilityModuleApi {
         // ── Step 4: Batch-fetch primary photo URLs (1 SQL, replaces N per-room SELECTs)
         Map<UUID, String> photoByRoom = buildPhotoMap(roomIds);
 
-        long nights = ChronoUnit.DAYS.between(request.checkIn(), request.checkOut());
-
         return rawResults.map(row -> mapToResponse(
-                row, request.checkIn(), request.checkOut(), nights, amenitiesByRoom, photoByRoom));
+                row, in, out, nights, amenitiesByRoom, photoByRoom));
     }
 
     @Override

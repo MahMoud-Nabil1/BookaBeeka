@@ -55,5 +55,10 @@ export const ownerApi = {
     const response = await api.post('/api/v1/owner/admins', req);
     return response.data;
   },
+
+  removeAdmin: async (adminId: string): Promise<{ message: string }> => {
+    const response = await api.delete(`/api/v1/owner/admins/${adminId}`);
+    return response.data;
+  },
 };
 

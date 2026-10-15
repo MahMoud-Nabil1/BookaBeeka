@@ -6,4 +6,5 @@ import java.util.UUID;
 public interface CustomerAuthPort {
     Optional<AuthUserDTO> findCustomerByEmail(String email);
     void updatePassword(UUID customerId, String newPasswordHash);
+    void activateCustomer(UUID customerId);
 }

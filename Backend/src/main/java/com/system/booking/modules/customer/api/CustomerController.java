@@ -20,7 +20,7 @@ import java.util.UUID;
  * as they deal with onboarding new customers before they have a JWT.</p>
  */
 @RestController
-@RequestMapping("/api/customers")
+@RequestMapping({"/api/customers", "/api/customer"})
 @RequiredArgsConstructor
 public class CustomerController {
 
@@ -87,5 +87,20 @@ public class CustomerController {
         UUID customerId = SecurityUtil.getCurrentCustomerPrincipal().id();
         customerService.changePassword(customerId, request);
         return ResponseEntity.ok(java.util.Map.of("message", "Password changed successfully"));
+    }
+
+    /**
+     * Delete/deactivate the authenticated customer's own account.
+     *
+     * <p><b>Access:</b> Authenticated CUSTOMER users only.</p>
+     *
+     * @return 200 OK with success message
+     */
+    @DeleteMapping({"/account", "/me"})
+    @PreAuthorize("hasRole('CUSTOMER')")
+    public ResponseEntity<java.util.Map<String, String>> deleteAccount() {
+        UUID customerId = SecurityUtil.getCurrentCustomerPrincipal().id();
+        customerService.deleteAccount(customerId);
+        return ResponseEntity.ok(java.util.Map.of("message", "Your account has been successfully deleted"));
     }
 }

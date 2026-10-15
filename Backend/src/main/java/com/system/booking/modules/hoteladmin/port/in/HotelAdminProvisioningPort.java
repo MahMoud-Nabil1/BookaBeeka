@@ -13,4 +13,6 @@ public interface HotelAdminProvisioningPort {
             String phone
     );
     long countAdminsByTenantId(UUID tenantId);
+
+    void removeAdmin(UUID tenantId, UUID adminId, UUID currentUserId);
 }

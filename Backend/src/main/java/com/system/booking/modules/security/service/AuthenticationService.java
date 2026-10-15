@@ -16,7 +16,6 @@ import com.system.booking.modules.security.port.in.CustomerAuthPort;
 import com.system.booking.modules.security.port.in.HotelAdminAuthPort;
 import com.system.booking.modules.security.port.in.OwnerAuthPort;
 import com.system.booking.modules.security.port.in.SuperAdminAuthPort;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationEventPublisher;
@@ -30,7 +29,6 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
 public class AuthenticationService {
 
@@ -47,6 +45,26 @@ public class AuthenticationService {
     private final JwtService jwtService;
     private final ApplicationEventPublisher eventPublisher;
     private final SecurityTokenStore tokenStore;
+
+    public AuthenticationService(
+            SuperAdminAuthPort superAdminPort,
+            OwnerAuthPort ownerPort,
+            HotelAdminAuthPort hotelAdminPort,
+            CustomerAuthPort customerPort,
+            PasswordEncoder passwordEncoder,
+            JwtService jwtService,
+            ApplicationEventPublisher eventPublisher,
+            SecurityTokenStore tokenStore
+    ) {
+        this.superAdminPort = superAdminPort;
+        this.ownerPort = ownerPort;
+        this.hotelAdminPort = hotelAdminPort;
+        this.customerPort = customerPort;
+        this.passwordEncoder = passwordEncoder;
+        this.jwtService = jwtService;
+        this.eventPublisher = eventPublisher;
+        this.tokenStore = tokenStore;
+    }
 
     public LoginResponse loginSuperAdmin(LoginRequest request) {
         var user = superAdminPort.findSuperAdminByEmail(request.email())
@@ -184,6 +202,17 @@ public class AuthenticationService {
         }
 
         try {
+            UUID targetUserId = entry.userId();
+            if (targetUserId == null) {
+                Optional<AuthUserDTO> customerOpt = customerPort.findCustomerByEmail(request.email());
+                if (customerOpt.isPresent()) {
+                    targetUserId = customerOpt.get().id();
+                }
+            }
+            if (targetUserId != null) {
+                customerPort.activateCustomer(targetUserId);
+            }
+
             log.info("Successfully verified OTP for user [{}] under tenant [{}]", request.email(), entry.tenantId());
             return OtpVerificationResponse.success("OTP verified successfully");
         } finally {
@@ -262,10 +291,23 @@ public class AuthenticationService {
     }
 
     private Optional<AuthUserDTO> findUserByEmail(String email) {
-        return customerPort.findCustomerByEmail(email)
-                .or(() -> hotelAdminPort.findAdminByEmail(email))
-                .or(() -> ownerPort.findOwnerByEmail(email))
-                .or(() -> superAdminPort.findSuperAdminByEmail(email));
+        if (customerPort != null) {
+            var cust = customerPort.findCustomerByEmail(email);
+            if (cust.isPresent()) return cust;
+        }
+        if (hotelAdminPort != null) {
+            var admin = hotelAdminPort.findAdminByEmail(email);
+            if (admin.isPresent()) return admin;
+        }
+        if (ownerPort != null) {
+            var owner = ownerPort.findOwnerByEmail(email);
+            if (owner.isPresent()) return owner;
+        }
+        if (superAdminPort != null) {
+            var superAdmin = superAdminPort.findSuperAdminByEmail(email);
+            if (superAdmin.isPresent()) return superAdmin;
+        }
+        return Optional.empty();
     }
 
     private LoginResponse verifyAndIssueToken(AuthUserDTO user, String rawPassword) {

@@ -84,4 +84,25 @@ public class HotelAdminService implements HotelAdminProvisioningPort {
     public long countAdminsByTenantId(UUID tenantId) {
         return hotelAdminRepository.countByTenantId(tenantId);
     }
+
+    @Override
+    @Transactional
+    public void removeAdmin(UUID tenantId, UUID adminId, UUID currentUserId) {
+        if (currentUserId != null && currentUserId.equals(adminId)) {
+            throw new IllegalStateException("Admins cannot delete their own account");
+        }
+
+        HotelAdmin admin = hotelAdminRepository.findByIdAndTenantId(adminId, tenantId)
+                .orElseThrow(() -> new EntityNotFoundException("Hotel admin not found with ID: " + adminId));
+
+        if (Boolean.TRUE.equals(admin.getIsActive())) {
+            long activeCount = hotelAdminRepository.countByTenantIdAndIsActiveTrue(tenantId);
+            if (activeCount <= 1) {
+                throw new IllegalStateException("Cannot remove the last active admin for this hotel");
+            }
+        }
+
+        admin.setIsActive(false);
+        hotelAdminRepository.save(admin);
+    }
 }

@@ -43,6 +43,7 @@ import java.util.UUID;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
+    private final com.system.booking.modules.security.service.SecurityTokenStore tokenStore;
 
     @Override
     protected void doFilterInternal(
@@ -62,8 +63,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         try {
             if (jwtService.isTokenValid(jwt) && SecurityContextHolder.getContext().getAuthentication() == null) {
-                Claims claims = jwtService.extractAllClaims(jwt);
                 UUID userId = jwtService.extractUserId(jwt);
+                if (tokenStore.isUserDeactivated(userId)) {
+                    SecurityContextHolder.clearContext();
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+
+                Claims claims = jwtService.extractAllClaims(jwt);
                 String role = claims.get("role", String.class);
                 String tenantIdClaim = claims.get("tenant_id", String.class);
                 UUID tenantId = (tenantIdClaim != null) ? UUID.fromString(tenantIdClaim) : null;

@@ -16,7 +16,6 @@ export interface RoomResponse {
 
 export interface CreateRoomRequest {
   tenantId: string;
-  branchId: string;
   name: string;
   roomCategory: string;       // Maps to backend: resourceType
   capacity?: number;

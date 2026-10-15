@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Outlet } from 'react-router-dom';
-import { LayoutDashboard, CalendarDays, CreditCard, Tag, DoorOpen, Users } from 'lucide-react';
+import { LayoutDashboard, CalendarDays, CreditCard, Tag, DoorOpen, Users, Star } from 'lucide-react';
 import Sidebar, { type NavItem } from '../../../../components/layout/Sidebar';
 import Navbar from '../../../../components/layout/Navbar';
 
@@ -9,6 +9,7 @@ const ownerNavItems: NavItem[] = [
   { title: 'Bookings',       href: '/staff/owner/bookings',       icon: CalendarDays },
   { title: 'Payments',       href: '/staff/owner/payments',       icon: CreditCard },
   { title: 'Rooms',          href: '/staff/owner/rooms',          icon: DoorOpen },
+  { title: 'Reviews',        href: '/staff/owner/reviews',        icon: Star },
   { title: 'Amenities',      href: '/staff/owner/amenities',      icon: Tag },
   { title: 'Manage Admins',  href: '/staff/owner/admins',         icon: Users },
 ];

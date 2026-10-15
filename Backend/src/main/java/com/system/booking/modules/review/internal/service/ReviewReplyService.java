@@ -1,5 +1,7 @@
 package com.system.booking.modules.review.internal.service;
 
+import com.system.booking.modules.customer.internal.entity.Customer;
+import com.system.booking.modules.customer.internal.repository.CustomerRepository;
 import com.system.booking.modules.review.internal.dto.ReviewResponseDto;
 import com.system.booking.modules.review.internal.entity.Review;
 import com.system.booking.modules.review.internal.exception.ReviewNotFoundException;
@@ -19,6 +21,7 @@ public class ReviewReplyService {
     private static final String SUPER_ADMIN_ROLE = "SUPER_ADMIN";
 
     private final ReviewRepository reviewRepo;
+    private final CustomerRepository customerRepo;
 
     // reply is a single editable field — every call just overwrites it and stamps who/when
     @Transactional
@@ -44,9 +47,21 @@ public class ReviewReplyService {
     }
 
     private ReviewResponseDto toDto(Review r) {
+        String firstName = "";
+        String lastName = "";
+        if (r.getCustomerId() != null) {
+            Customer customer = customerRepo.findById(r.getCustomerId()).orElse(null);
+            if (customer != null) {
+                firstName = customer.getFirstName() != null ? customer.getFirstName() : "";
+                lastName  = customer.getLastName()  != null ? customer.getLastName()  : "";
+            }
+        }
+
         return new ReviewResponseDto(
                 r.getId(), r.getTenantId(), r.getBookingId(), r.getCustomerId(),
-                r.getServiceId(), r.getStaffId(), r.getRating(), r.getComment(), r.getIsVerified(),
+                firstName, lastName,
+                r.getServiceId(), r.getRoomId(), r.getStaffId(),
+                r.getRating(), r.getComment(), r.getIsVerified(),
                 r.getReply(), r.getRepliedBy(), r.getRepliedByRole(), r.getRepliedAt(),
                 r.getCreatedAt(), r.getUpdatedAt());
     }

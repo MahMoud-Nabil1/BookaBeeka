@@ -117,13 +117,14 @@ class NotificationModuleTest {
     }
 
     @Test
-    @DisplayName("NotificationEvent should reject null customerId")
+    @DisplayName("NotificationEvent should allow null customerId for platform or owner notifications")
     void testNotificationEventNullCustomer() {
-        assertThatThrownBy(() -> NotificationEvent.of(
+        NotificationEvent event = NotificationEvent.of(
                 tenantId, null, bookingId, NotificationType.OTP_REQUESTED,
                 "OTP", "test@test.com", "code"
-        )).isInstanceOf(IllegalArgumentException.class)
-          .hasMessageContaining("customerId must not be null");
+        );
+        assertThat(event.customerId()).isNull();
+        assertThat(event.recipientEmail()).isEqualTo("test@test.com");
     }
 
     @Test

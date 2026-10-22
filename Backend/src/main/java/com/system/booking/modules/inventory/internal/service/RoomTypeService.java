@@ -1,5 +1,6 @@
 package com.system.booking.modules.inventory.internal.service;
 
+import com.system.booking.common.config.CacheConfig;
 import com.system.booking.modules.inventory.internal.dto.request.RoomTypeCreateRequest;
 import com.system.booking.modules.inventory.internal.dto.request.RoomTypeUpdateRequest;
 import com.system.booking.modules.inventory.internal.dto.response.RoomTypeResponse;
@@ -8,6 +9,9 @@ import com.system.booking.modules.inventory.internal.exception.DuplicateInventor
 import com.system.booking.modules.inventory.internal.exception.RoomTypeNotFoundException;
 import com.system.booking.modules.inventory.internal.repository.RoomTypeRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,16 +38,13 @@ public class RoomTypeService {
 
     /**
      * Creates a new room type scoped to the given tenant.
-     *
-     * <p>The pre-creation duplicate check uses a case-insensitive name match scoped to
-     * {@code tenantId}. This mirrors the DB-level {@code uq_room_type_tenant_name}
-     * composite unique constraint and provides a clean application-level error message
-     * instead of letting a raw {@code DataIntegrityViolationException} propagate.</p>
+     * Evicts the tenant's room-type list cache so the next list call is fresh.
      */
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = CacheConfig.CACHE_ROOM_TYPES, key = "#tenantId")
+    })
     public RoomTypeResponse createRoomType(UUID tenantId, RoomTypeCreateRequest req) {
-        // Guard against duplicate names within this tenant before hitting the DB constraint.
-        // The check is case-insensitive to match the unique constraint semantics.
         if (roomTypeRepository.existsByTenantIdAndNameIgnoreCase(tenantId, req.name().trim())) {
             throw new DuplicateInventoryEntityException("Room type '" + req.name() + "' already exists for this tenant");
         }
@@ -63,13 +64,12 @@ public class RoomTypeService {
 
     /**
      * Retrieves a single room type, scoped to the given tenant.
-     *
-     * <p>Uses {@code findByTenantIdAndId} — the compound key lookup ensures that a
-     * tenant cannot access room types from a different tenant even with a valid UUID,
-     * as the query will simply return empty and throw a {@link RoomTypeNotFoundException}
-     * (404) rather than revealing that the resource exists under another tenant.</p>
+     * Cached individually by tenantId + roomTypeId.
      */
     @Transactional(readOnly = true)
+    @Cacheable(value = CacheConfig.CACHE_ROOM_TYPES,
+               key = "#tenantId + '-' + #roomTypeId",
+               unless = "#result == null")
     public RoomTypeResponse getRoomType(UUID tenantId, UUID roomTypeId) {
         RoomType roomType = roomTypeRepository.findByTenantIdAndId(tenantId, roomTypeId)
                 .orElseThrow(() -> new RoomTypeNotFoundException(roomTypeId));
@@ -78,11 +78,10 @@ public class RoomTypeService {
 
     /**
      * Lists all room types belonging to the given tenant.
-     *
-     * <p>Scoped to {@code tenantId} — Tenant B will never see Tenant A's room types
-     * in this list, even if they are on the same database instance.</p>
+     * Cached by tenantId — evicted on any write to room types for that tenant.
      */
     @Transactional(readOnly = true)
+    @Cacheable(value = CacheConfig.CACHE_ROOM_TYPES, key = "#tenantId", unless = "#result == null")
     public List<RoomTypeResponse> listRoomTypes(UUID tenantId) {
         return roomTypeRepository.findByTenantId(tenantId).stream()
                 .map(this::toResponse)
@@ -90,19 +89,19 @@ public class RoomTypeService {
     }
 
     /**
-     * Updates a room type, scoped to the given tenant.
-     *
-     * <p>Both the existence check ({@code findByTenantIdAndId}) and the rename duplicate
-     * check ({@code existsByTenantIdAndNameIgnoreCaseAndIdNot}) are scoped to the tenant,
-     * providing full isolation during update operations.</p>
+     * Updates a room type. Evicts both the list cache and the single-entry cache
+     * for this tenant, so any cached read is refreshed.
      */
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = CacheConfig.CACHE_ROOM_TYPES, key = "#tenantId"),
+            @CacheEvict(value = CacheConfig.CACHE_ROOM_TYPES, key = "#tenantId + '-' + #roomTypeId")
+    })
     public RoomTypeResponse updateRoomType(UUID tenantId, UUID roomTypeId, RoomTypeUpdateRequest req) {
         RoomType roomType = roomTypeRepository.findByTenantIdAndId(tenantId, roomTypeId)
                 .orElseThrow(() -> new RoomTypeNotFoundException(roomTypeId));
 
         if (req.name() != null && !req.name().trim().equalsIgnoreCase(roomType.getName())) {
-            // Check for name collision only if the name is actually changing.
             if (roomTypeRepository.existsByTenantIdAndNameIgnoreCaseAndIdNot(tenantId, req.name().trim(), roomTypeId)) {
                 throw new DuplicateInventoryEntityException("Room type '" + req.name() + "' already exists for this tenant");
             }
@@ -119,11 +118,13 @@ public class RoomTypeService {
     }
 
     /**
-     * Deletes a room type, scoped to the given tenant.
-     *
-     * <p>The tenant-scoped lookup ensures a tenant can only delete their own room types.</p>
+     * Deletes a room type. Evicts the list and single-entry caches for this tenant.
      */
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = CacheConfig.CACHE_ROOM_TYPES, key = "#tenantId"),
+            @CacheEvict(value = CacheConfig.CACHE_ROOM_TYPES, key = "#tenantId + '-' + #roomTypeId")
+    })
     public void deleteRoomType(UUID tenantId, UUID roomTypeId) {
         RoomType roomType = roomTypeRepository.findByTenantIdAndId(tenantId, roomTypeId)
                 .orElseThrow(() -> new RoomTypeNotFoundException(roomTypeId));

@@ -33,15 +33,19 @@ public class ReviewAdminController {
     @GetMapping
     public ResponseEntity<Page<ReviewResponseDto>> listReviews(
             @RequestParam(required = false) UUID tenantId,
+            @RequestParam(required = false) UUID roomId,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
         UUID scopedTenantId = resolveTenantId(tenantId);
-        Page<ReviewResponseDto> reviews = reviewService.getReviewsForTenant(scopedTenantId, PageRequest.of(page, size));
+        Page<ReviewResponseDto> reviews = roomId != null
+                ? reviewService.getReviewsForRoom(scopedTenantId, roomId, PageRequest.of(page, size))
+                : reviewService.getReviewsForTenant(scopedTenantId, PageRequest.of(page, size));
         return ResponseEntity.ok(reviews);
     }
 
     @PostMapping("/{reviewId}/reply")
+    @PreAuthorize("hasAnyRole('ADMIN', 'SUPER_ADMIN')")
     public ResponseEntity<ReviewResponseDto> replyToReview(
             @PathVariable UUID reviewId,
             @RequestParam(required = false) UUID tenantId,

@@ -22,6 +22,7 @@ export interface UploadSignatureResponse {
   timestamp: number;
   cloudName: string;
   apiKey: string;
+  publicId: string;
   folder: string;
 }
 

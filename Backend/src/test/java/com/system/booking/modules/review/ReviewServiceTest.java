@@ -71,6 +71,7 @@ class ReviewServiceTest {
         );
 
         when(bookingApi.getBookingById(tenantId, bookingId)).thenReturn(bookingDto);
+        when(inventoryApi.serviceOfferingExists(serviceId)).thenReturn(true);
         when(reviewRepo.existsByBookingId(bookingId)).thenReturn(false);
         when(reviewRepo.save(any(Review.class))).thenAnswer(invocation -> {
             Review r = invocation.getArgument(0);
@@ -137,6 +138,7 @@ class ReviewServiceTest {
         );
 
         when(bookingApi.getBookingById(tenantId, bookingId)).thenReturn(bookingDto);
+        when(inventoryApi.serviceOfferingExists(serviceId)).thenReturn(true);
         when(reviewRepo.existsByBookingId(bookingId)).thenReturn(false);
         when(reviewRepo.save(any(Review.class))).thenAnswer(invocation -> {
             Review r = invocation.getArgument(0);

@@ -48,4 +48,20 @@ public class BookingExceptionHandler {
                 "message", e.getMessage(),
                 "timestamp", OffsetDateTime.now().toString()));
     }
+
+    @ExceptionHandler(CustomerBannedException.class)
+    public ResponseEntity<Map<String, Object>> handleCustomerBanned(CustomerBannedException e) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of(
+                "error", "Customer banned",
+                "message", e.getMessage(),
+                "timestamp", OffsetDateTime.now().toString()));
+    }
+
+    @ExceptionHandler(HotelSuspendedException.class)
+    public ResponseEntity<Map<String, Object>> handleHotelSuspended(HotelSuspendedException e) {
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(Map.of(
+                "error", "Hotel suspended",
+                "message", e.getMessage(),
+                "timestamp", OffsetDateTime.now().toString()));
+    }
 }

@@ -77,6 +77,22 @@ export function useCreateReview() {
     },
   });
 }
+/**
+ * Hook for staff to fetch reviews for their hotel (optionally filtered by room)
+ */
+export function useAdminReviews(
+  tenantId?: string | null,
+  roomId?: string | null,
+  page = 0,
+  size = 20
+) {
+  return useQuery({
+    queryKey: ['admin-reviews', tenantId, roomId, page, size],
+    queryFn: () => reviewApi.getAdminReviews(tenantId, page, size, roomId),
+    enabled: Boolean(tenantId !== undefined),
+    staleTime: 1000 * 60 * 2,
+  });
+}
 
 /**
  * Hook for staff to reply to a review
@@ -98,6 +114,7 @@ export function useReplyToReview() {
       toast.success('Reply posted successfully');
       queryClient.invalidateQueries({ queryKey: ['reviews'] });
       queryClient.invalidateQueries({ queryKey: ['admin-reviews'] });
+      queryClient.invalidateQueries({ queryKey: ['room-reviews'] });
     },
     onError: (error: any) => {
       const message =
@@ -106,3 +123,4 @@ export function useReplyToReview() {
     },
   });
 }
+

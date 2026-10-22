@@ -1,5 +1,6 @@
 package com.system.booking.modules.inventory.internal.service;
 
+import com.system.booking.common.config.CacheConfig;
 import com.system.booking.modules.inventory.internal.dto.request.CreateResourceRequest;
 import com.system.booking.modules.inventory.internal.dto.request.UpdateResourceRequest;
 import com.system.booking.modules.inventory.internal.dto.response.ResourceResponse;
@@ -12,28 +13,29 @@ import com.system.booking.modules.inventory.internal.exception.RoomTypeNotFoundE
 import com.system.booking.modules.inventory.internal.repository.ResourceRepository;
 import com.system.booking.modules.inventory.internal.repository.RoomTypeRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
 /**
- * Service responsible for CRUD operations on {@link Resource} entities (physical bookable units,
- * e.g., individual hotel rooms).
+ * Service responsible for CRUD operations on {@link Resource} (room) entities.
  *
  * <p><b>Multi-Tenancy Isolation Pattern:</b><br>
- * All read and write operations are scoped to a {@code tenantId} extracted from the caller's JWT.
- * No method accepts a client-supplied tenant identifier.</p>
+ * Every public method accepts a {@code tenantId} extracted from the JWT.
+ * All repository queries include tenantId as a predicate.</p>
  *
  * <p><b>Intra-Tenant RoomType Validation:</b><br>
- * When a {@code roomTypeId} is provided in the create or update request, the service resolves the
- * {@link RoomType} using {@code findByTenantIdAndId}. This is a critical cross-field isolation check:
- * it prevents an authenticated Owner of Tenant A from assigning a RoomType that belongs to Tenant B
- * to one of their own Resources. If the RoomType doesn't belong to the caller's tenant, the query
- * returns empty and a {@link RoomTypeNotFoundException} is thrown (404), intentionally not revealing
- * that the RoomType exists under a different tenant.</p>
+ * When a {@code roomTypeId} is provided, the service resolves the {@link RoomType}
+ * using {@code findByTenantIdAndId} to prevent cross-tenant RoomType assignment.</p>
  */
 @Service
 @RequiredArgsConstructor
@@ -43,33 +45,38 @@ public class ResourceService {
     private final RoomTypeRepository roomTypeRepository;
 
     /**
-     * Creates a new resource (room) scoped to the given tenant.
-     *
-     * <p>If a {@code roomTypeId} is supplied, it is validated against the caller's tenant to prevent
-     * cross-tenant RoomType assignment. Capacity and price-per-night fall back to the RoomType's
-     * configured values if not explicitly provided in the request.</p>
+     * Creates a new resource (room). Evicts the tenant's room list cache.
      */
     @Transactional
+    @CacheEvict(value = CacheConfig.CACHE_RESOURCES, key = "#tenantId")
     public ResourceResponse createResource(UUID tenantId, CreateResourceRequest req) {
         RoomType roomType = null;
         if (req.roomTypeId() != null) {
-            // Validate that the specified RoomType belongs to the same tenant.
-            // Using findByTenantIdAndId ensures cross-tenant RoomType assignment is silently rejected
-            // with a 404 rather than a security error, to avoid exposing cross-tenant data existence.
             roomType = roomTypeRepository.findByTenantIdAndId(tenantId, req.roomTypeId())
                     .orElseThrow(() -> new RoomTypeNotFoundException(req.roomTypeId()));
         }
 
         if (req.roomNumber() != null && !req.roomNumber().isBlank()) {
-            // Guard against duplicate room numbers within the same tenant.
             if (resourceRepository.existsByTenantIdAndRoomNumber(tenantId, req.roomNumber().trim())) {
                 throw new DuplicateInventoryEntityException("Room number '" + req.roomNumber() + "' already exists for this tenant");
             }
         }
 
-        // Inherit capacity and price from RoomType when not explicitly overridden in the request.
         Integer effectiveCapacity = req.capacity() != null ? req.capacity()
                 : (roomType != null ? roomType.getCapacity() : null);
+
+        BigDecimal effectivePrice = req.pricePerNight();
+        if (effectivePrice == null && req.specs() != null && req.specs().get("pricePerNight") != null) {
+            effectivePrice = parseBigDecimal(req.specs().get("pricePerNight"));
+        }
+        if (effectivePrice == null && roomType != null) {
+            effectivePrice = roomType.getBasePricePerNight();
+        }
+
+        Map<String, Object> effectiveSpecs = req.specs() != null ? new HashMap<>(req.specs()) : new HashMap<>();
+        if (effectivePrice != null && !effectiveSpecs.containsKey("pricePerNight")) {
+            effectiveSpecs.put("pricePerNight", effectivePrice);
+        }
 
         Resource resource = Resource.builder()
                 .tenantId(tenantId)
@@ -80,10 +87,10 @@ public class ResourceService {
                 .status(req.status() != null ? req.status() : RoomStatus.AVAILABLE)
                 .resourceType(req.resourceType() != null ? req.resourceType() : "ROOM")
                 .capacity(effectiveCapacity)
-                .specs(req.specs())
+                .specs(effectiveSpecs)
                 .isActive(true)
                 .isBookable(true)
-                .pricePerNight(req.pricePerNight() != null ? req.pricePerNight() : (roomType != null ? roomType.getBasePricePerNight() : null))
+                .pricePerNight(effectivePrice)
                 .currency(req.currency() != null ? req.currency() : "USD")
                 .build();
 
@@ -92,19 +99,18 @@ public class ResourceService {
     }
 
     /**
-     * Updates an existing resource, scoped to the given tenant.
-     *
-     * <p>If the request includes a new {@code roomTypeId}, the new RoomType is validated
-     * against the caller's tenant before assignment — same cross-tenant protection as in
-     * {@link #createResource}.</p>
+     * Updates a resource. Evicts both the list cache and the single-resource cache.
      */
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = CacheConfig.CACHE_RESOURCES, key = "#tenantId"),
+            @CacheEvict(value = CacheConfig.CACHE_RESOURCE, key = "#tenantId + '-' + #resourceId")
+    })
     public ResourceResponse updateResource(UUID tenantId, UUID resourceId, UpdateResourceRequest req) {
         Resource resource = resourceRepository.findByTenantIdAndId(tenantId, resourceId)
                 .orElseThrow(() -> new ResourceNotFoundException(resourceId));
 
         if (req.roomTypeId() != null) {
-            // Re-validate RoomType tenant membership on update, same as on create.
             RoomType newType = roomTypeRepository.findByTenantIdAndId(tenantId, req.roomTypeId())
                     .orElseThrow(() -> new RoomTypeNotFoundException(req.roomTypeId()));
             resource.setRoomType(newType);
@@ -118,15 +124,32 @@ public class ResourceService {
             resource.setRoomNumber(req.roomNumber().trim());
         }
 
+        BigDecimal newPrice = req.pricePerNight();
+        if (newPrice == null && req.specs() != null && req.specs().get("pricePerNight") != null) {
+            newPrice = parseBigDecimal(req.specs().get("pricePerNight"));
+        }
+        if (newPrice != null) {
+            resource.setPricePerNight(newPrice);
+        }
+
         if (req.name() != null) resource.setName(req.name().trim());
         if (req.floor() != null) resource.setFloor(req.floor());
         if (req.status() != null) resource.setStatus(req.status());
         if (req.resourceType() != null) resource.setResourceType(req.resourceType());
         if (req.capacity() != null) resource.setCapacity(req.capacity());
-        if (req.specs() != null) resource.setSpecs(req.specs());
+        if (req.specs() != null) {
+            Map<String, Object> specsMap = new HashMap<>(req.specs());
+            if (resource.getPricePerNight() != null && !specsMap.containsKey("pricePerNight")) {
+                specsMap.put("pricePerNight", resource.getPricePerNight());
+            }
+            resource.setSpecs(specsMap);
+        } else if (resource.getPricePerNight() != null && (resource.getSpecs() == null || !resource.getSpecs().containsKey("pricePerNight"))) {
+            Map<String, Object> specsMap = resource.getSpecs() != null ? new HashMap<>(resource.getSpecs()) : new HashMap<>();
+            specsMap.put("pricePerNight", resource.getPricePerNight());
+            resource.setSpecs(specsMap);
+        }
         if (req.isActive() != null) resource.setIsActive(req.isActive());
         if (req.isBookable() != null) resource.setIsBookable(req.isBookable());
-        if (req.pricePerNight() != null) resource.setPricePerNight(req.pricePerNight());
         if (req.currency() != null) resource.setCurrency(req.currency());
 
         resource = resourceRepository.save(resource);
@@ -134,11 +157,11 @@ public class ResourceService {
     }
 
     /**
-     * Lists all resources belonging to the given tenant.
-     *
-     * <p>Query is scoped to {@code tenantId} — only this tenant's rooms are returned.</p>
+     * Lists all resources for a tenant.
+     * Cached by tenantId — evicted on any write.
      */
     @Transactional(readOnly = true)
+    @Cacheable(value = CacheConfig.CACHE_RESOURCES, key = "#tenantId", unless = "#result == null")
     public List<ResourceResponse> listResources(UUID tenantId) {
         return resourceRepository.findByTenantId(tenantId).stream()
                 .map(this::toResponse)
@@ -146,13 +169,13 @@ public class ResourceService {
     }
 
     /**
-     * Retrieves a single resource by ID, scoped to the given tenant.
-     *
-     * <p>The compound {@code findByTenantIdAndId} lookup ensures a 404 is returned
-     * if the resource belongs to a different tenant — consistent with the principle
-     * of not revealing cross-tenant data existence.</p>
+     * Retrieves a single resource by ID.
+     * Cached individually by tenantId + resourceId.
      */
     @Transactional(readOnly = true)
+    @Cacheable(value = CacheConfig.CACHE_RESOURCE,
+               key = "#tenantId + '-' + #resourceId",
+               unless = "#result == null")
     public ResourceResponse getResource(UUID tenantId, UUID resourceId) {
         Resource resource = resourceRepository.findByTenantIdAndId(tenantId, resourceId)
                 .orElseThrow(() -> new ResourceNotFoundException(resourceId));
@@ -160,9 +183,13 @@ public class ResourceService {
     }
 
     /**
-     * Deletes a resource, scoped to the given tenant.
+     * Deletes a resource. Evicts both the list and single-resource caches.
      */
     @Transactional
+    @Caching(evict = {
+            @CacheEvict(value = CacheConfig.CACHE_RESOURCES, key = "#tenantId"),
+            @CacheEvict(value = CacheConfig.CACHE_RESOURCE, key = "#tenantId + '-' + #resourceId")
+    })
     public void deleteResource(UUID tenantId, UUID resourceId) {
         Resource resource = resourceRepository.findByTenantIdAndId(tenantId, resourceId)
                 .orElseThrow(() -> new ResourceNotFoundException(resourceId));
@@ -170,6 +197,19 @@ public class ResourceService {
     }
 
     private ResourceResponse toResponse(Resource r) {
+        BigDecimal effectivePrice = r.getPricePerNight();
+        if (effectivePrice == null && r.getSpecs() != null && r.getSpecs().get("pricePerNight") != null) {
+            effectivePrice = parseBigDecimal(r.getSpecs().get("pricePerNight"));
+        }
+        if (effectivePrice == null && r.getRoomType() != null) {
+            effectivePrice = r.getRoomType().getBasePricePerNight();
+        }
+
+        Map<String, Object> responseSpecs = r.getSpecs() != null ? new HashMap<>(r.getSpecs()) : new HashMap<>();
+        if (effectivePrice != null && !responseSpecs.containsKey("pricePerNight")) {
+            responseSpecs.put("pricePerNight", effectivePrice);
+        }
+
         return new ResourceResponse(
                 r.getId(),
                 r.getTenantId(),
@@ -181,12 +221,23 @@ public class ResourceService {
                 r.getStatus(),
                 r.getResourceType(),
                 r.getCapacity(),
-                r.getSpecs(),
+                responseSpecs,
                 r.getIsActive(),
                 r.getIsBookable(),
-                r.getPricePerNight(),
+                effectivePrice,
                 r.getCurrency(),
                 r.getCreatedAt() != null ? r.getCreatedAt().atZone(java.time.ZoneId.systemDefault()).toLocalDateTime() : null
         );
+    }
+
+    private BigDecimal parseBigDecimal(Object value) {
+        if (value == null) return null;
+        if (value instanceof BigDecimal bd) return bd;
+        if (value instanceof Number n) return BigDecimal.valueOf(n.doubleValue());
+        try {
+            return new BigDecimal(value.toString().trim());
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

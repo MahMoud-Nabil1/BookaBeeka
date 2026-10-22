@@ -134,4 +134,8 @@ public interface NotificationRepository extends JpaRepository<Notification, UUID
             @Param("maxRetries") int maxRetries,
             Pageable pageable
     );
+
+    @org.springframework.data.jpa.repository.Modifying
+    @Query("DELETE FROM Notification n WHERE n.customer.id = :customerId")
+    void deleteByCustomerId(@Param("customerId") UUID customerId);
 }

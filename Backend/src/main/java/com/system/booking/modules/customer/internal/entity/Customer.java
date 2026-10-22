@@ -11,6 +11,8 @@ import lombok.AllArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import lombok.Builder;
 
+import java.time.LocalDateTime;
+
 /**
  * JPA entity representing a Customer in the booking system.
  *
@@ -50,14 +52,26 @@ public class Customer extends BaseEntity {
 
     /**
      * Whether this customer account is active.
-     * Set to {@code false} by a SuperAdmin to ban the customer.
-     * Banned customers can still have their existing data read,
-     * but cannot log in (enforced at the auth layer).
-     *
-     * <p>DB migration: {@code ALTER TABLE customer
-     * ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT TRUE;}</p>
      */
     @Column(name = "is_active", nullable = false)
     @Builder.Default
     private Boolean isActive = true;
+
+    /**
+     * Whether this customer account is banned from making room bookings.
+     * Banned customers can still log in and browse, but any booking creation attempt
+     * is rejected with HTTP 403.
+     */
+    @Column(name = "banned", nullable = false, columnDefinition = "boolean not null default false")
+    @Builder.Default
+    private Boolean banned = false;
+
+    @Column(name = "banned_at")
+    private LocalDateTime bannedAt;
+
+    @Column(name = "banned_by", length = 255)
+    private String bannedBy;
+
+    @Column(name = "ban_reason", columnDefinition = "text")
+    private String banReason;
 }

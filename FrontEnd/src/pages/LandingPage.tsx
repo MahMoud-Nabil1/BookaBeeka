@@ -96,14 +96,11 @@ const STEPS = [
   },
 ];
 
+// Fetch featured rooms for the landing page.
+// Without date parameters, the backend returns active rooms for homepage discovery.
 async function fetchFeaturedRooms(): Promise<AvailableRoomItem[]> {
-  const today = new Date().toISOString().split('T')[0];
-  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
-
   const response = await api.get('/api/availability/search', {
     params: {
-      checkIn: today,
-      checkOut: tomorrow,
       page: 0,
       size: 8,
     },

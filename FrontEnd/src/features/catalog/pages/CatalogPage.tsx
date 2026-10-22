@@ -9,6 +9,7 @@ import AmenitiesFilter, { type AmenityStat } from '../components/AmenitiesFilter
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import api from '../../../config/api';
+import { useCatalogSync } from '../../../hooks/useCatalogSync';
 import type { RoomResponse, RoomTypeResponse } from '../../../types/inventory';
 
 // Sensible default amenities based on category to ensure rich filtering experience
@@ -35,16 +36,14 @@ function getDefaultAmenitiesByCategory(category = '', name = ''): string[] {
   return ['Free WiFi', 'Air Conditioning', 'Flat-screen TV'];
 }
 
-// Public API to get all available rooms across all tenants (for customer browsing)
+// Public API to get all available rooms across all tenants (for customer browsing).
+// Without date parameters, the backend returns all active bookable rooms so that
+// booking a room for a specific interval reserves that interval without causing
+// the room to vanish from the room catalog.
 async function getAllAvailableRooms(): Promise<RoomResponse[]> {
-  const today = new Date().toISOString().split('T')[0];
-  const tomorrow = new Date(Date.now() + 86400000).toISOString().split('T')[0];
-
   try {
     const response = await api.get(`/api/availability/search`, {
       params: {
-        checkIn: today,
-        checkOut: tomorrow,
         page: 0,
         size: 100,
       },
@@ -87,6 +86,8 @@ async function getAllAvailableRooms(): Promise<RoomResponse[]> {
           bedType: item.room?.bedType,
           amenities: allRoomAmenities,
           rating: rating,
+          // Use real Cloudinary URL when available (served by backend batch photo query)
+          image: item.room?.primaryPhotoUrl || undefined,
           specs: {
             ...(item.room?.specs || item.roomInfo?.specs || {}),
             rating: rating,
@@ -118,6 +119,9 @@ export default function CatalogPage() {
 
   // Filter System 2: Amenities state ("What comes with the room")
   const [selectedAmenities, setSelectedAmenities] = useState<string[]>([]);
+
+  // Automatically sync catalog when a hotel is suspended/deleted/unsuspended
+  useCatalogSync(20000);
 
   const { data: rooms, isLoading: roomsLoading, isError: roomsError } = useQuery({
     queryKey: ['available-rooms'],

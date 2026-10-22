@@ -2,6 +2,8 @@ package com.system.booking.modules.hoteladmin.internal.repository;
 
 import com.system.booking.modules.hoteladmin.internal.entity.HotelAdmin;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -20,4 +22,9 @@ public interface HotelAdminRepository extends JpaRepository<HotelAdmin, UUID> {
     List<HotelAdmin> findByTenantId(UUID tenantId);
 
     long countByTenantId(UUID tenantId);
+
+    long countByTenantIdAndIsActiveTrue(UUID tenantId);
+
+    @Query("SELECT a.tenantId, COUNT(a) FROM HotelAdmin a WHERE a.tenantId IN :tenantIds AND a.isActive = true GROUP BY a.tenantId")
+    List<Object[]> countActiveByTenantIds(@Param("tenantIds") List<UUID> tenantIds);
 }

@@ -56,16 +56,18 @@ export const reviewApi = {
   },
 
   /**
-   * Staff/Admin: Fetch all reviews for their tenant
+   * Staff/Admin: Fetch reviews for their tenant (optionally filtered by room)
    */
   getAdminReviews: async (
     tenantId?: string | null,
     page = 0,
-    size = 20
+    size = 20,
+    roomId?: string | null
   ): Promise<PageResponse<ReviewDto>> => {
     const response = await api.get<PageResponse<ReviewDto>>('/api/admin/reviews', {
       params: {
         ...(tenantId ? { tenantId } : {}),
+        ...(roomId ? { roomId } : {}),
         page,
         size,
       },

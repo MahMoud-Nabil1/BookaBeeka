@@ -12,6 +12,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/v1/owner")
@@ -44,6 +46,15 @@ public class OwnerController {
     public ResponseEntity<List<OwnerAdminSummaryDto>> listAdmins(
             @AuthenticationPrincipal HotelUserPrincipal principal) {
         return ResponseEntity.ok(ownerService.listAdmins(principal.tenantId()));
+    }
+
+    @PreAuthorize("hasAnyRole('OWNER', 'ADMIN')")
+    @DeleteMapping("/admins/{adminId}")
+    public ResponseEntity<Map<String, String>> removeAdmin(
+            @AuthenticationPrincipal HotelUserPrincipal principal,
+            @PathVariable UUID adminId) {
+        ownerService.removeAdmin(principal.tenantId(), adminId, principal.id());
+        return ResponseEntity.ok(Map.of("message", "Admin removed successfully"));
     }
 
     // ── Dashboard (Protected) ───────────────────────────────────────────────

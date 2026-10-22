@@ -12,6 +12,10 @@ public record CustomerSummaryResponse(
         String lastName,
         String phone,
         Boolean isActive,
+        Boolean banned,
+        LocalDateTime bannedAt,
+        String bannedBy,
+        String banReason,
         BigDecimal walletBalance,   // null if no wallet yet
         LocalDateTime createdAt
 ) {}

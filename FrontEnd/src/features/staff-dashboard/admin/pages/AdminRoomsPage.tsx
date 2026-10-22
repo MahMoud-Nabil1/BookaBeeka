@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Tag, Loader2, Image, Plus, Pencil, Trash2 } from 'lucide-react';
+import { Loader2, Plus, Pencil, Trash2 } from 'lucide-react';
 import PageLayout from '../../../../components/layout/PageLayout';
 import { Button } from '../../../../components/ui/button';
 import {
@@ -12,20 +12,12 @@ import {
 } from '../../../../components/ui/table';
 import { Badge } from '../../../../components/ui/badge';
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '../../../../components/ui/dialog';
-import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from '../../../../components/ui/popover';
 import { useRooms, useDeleteRoom } from '../../../catalog/hooks/useInventory';
 import { useRoomAmenities } from '../../../catalog/hooks/useAmenities';
-import { RoomAmenitiesManager } from '../components/RoomAmenitiesManager';
-import { RoomPhotoManager } from '../components/RoomPhotoManager';
 import { CreateRoomModal } from '../components/CreateRoomModal';
 import { EditRoomModal } from '../components/EditRoomModal';
 import { useAppSelector } from '../../../../redux/hooks';
@@ -38,8 +30,6 @@ export function AdminRoomsPage() {
 
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingRoom, setEditingRoom] = useState<RoomResponse | null>(null);
-  const [selectedRoom, setSelectedRoom] = useState<{ id: string; name: string } | null>(null);
-  const [selectedRoomForPhotos, setSelectedRoomForPhotos] = useState<{ id: string; name: string } | null>(null);
 
   return (
     <PageLayout
@@ -90,8 +80,6 @@ export function AdminRoomsPage() {
                     key={room.id}
                     room={room}
                     onEdit={() => setEditingRoom(room)}
-                    onManageAmenities={() => setSelectedRoom({ id: room.id, name: room.name })}
-                    onManagePhotos={() => setSelectedRoomForPhotos({ id: room.id, name: room.name })}
                   />
                 ))}
               </TableBody>
@@ -111,31 +99,6 @@ export function AdminRoomsPage() {
           onOpenChange={(open) => !open && setEditingRoom(null)}
         />
       )}
-
-      {/* Amenities manager */}
-      {selectedRoom && (
-        <RoomAmenitiesManager
-          roomId={selectedRoom.id}
-          roomName={selectedRoom.name}
-          open={!!selectedRoom}
-          onOpenChange={(open) => !open && setSelectedRoom(null)}
-        />
-      )}
-
-      {/* Photos manager */}
-      {selectedRoomForPhotos && (
-        <Dialog
-          open={!!selectedRoomForPhotos}
-          onOpenChange={(open) => !open && setSelectedRoomForPhotos(null)}
-        >
-          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>Manage Photos — {selectedRoomForPhotos.name}</DialogTitle>
-            </DialogHeader>
-            <RoomPhotoManager resourceId={selectedRoomForPhotos.id} />
-          </DialogContent>
-        </Dialog>
-      )}
     </PageLayout>
   );
 }
@@ -145,13 +108,9 @@ export function AdminRoomsPage() {
 function RoomRow({
   room,
   onEdit,
-  onManageAmenities,
-  onManagePhotos,
 }: {
   room: RoomResponse;
   onEdit: () => void;
-  onManageAmenities: () => void;
-  onManagePhotos: () => void;
 }) {
   const { data: amenities = [], isLoading: loadingAmenities } = useRoomAmenities(room.id);
   const deleteRoom = useDeleteRoom();
@@ -194,14 +153,6 @@ function RoomRow({
       </TableCell>
       <TableCell className="text-right">
         <div className="flex justify-end gap-1">
-          <Button variant="ghost" size="sm" onClick={onManagePhotos}>
-            <Image className="h-4 w-4 mr-1" />
-            Photos
-          </Button>
-          <Button variant="ghost" size="sm" onClick={onManageAmenities}>
-            <Tag className="h-4 w-4 mr-1" />
-            Amenities
-          </Button>
           <Button variant="ghost" size="sm" onClick={onEdit}>
             <Pencil className="h-4 w-4" />
           </Button>

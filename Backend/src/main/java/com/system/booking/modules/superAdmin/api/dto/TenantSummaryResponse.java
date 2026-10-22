@@ -11,5 +11,10 @@ public record TenantSummaryResponse(
         String status,
         String currency,
         String timezone,
+        long ownersCount,
+        long adminsCount,
+        LocalDateTime suspendedAt,
+        String suspendedBy,
+        String suspendedReason,
         LocalDateTime createdAt
 ) {}

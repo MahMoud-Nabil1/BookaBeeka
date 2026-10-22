@@ -35,10 +35,13 @@ const ROOM_TYPE_PHOTOS: Record<string, string> = {
 const DEFAULT_PHOTO = 'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?auto=format&fit=crop&w=600&q=80';
 
 function getRoomImage(room: ExtendedRoom): string {
+  // 1. Real Cloudinary URL uploaded by hotel owner (served by backend batch query)
   if (room.image) return room.image;
+  // 2. Image URL embedded in specs
   if (room.specs?.imageUrl && typeof room.specs.imageUrl === 'string') return room.specs.imageUrl;
   if (room.specs?.image && typeof room.specs.image === 'string') return room.specs.image;
 
+  // 3. Stock photo fallback by room category
   const key = (room.roomCategory || room.name || '').toUpperCase();
   for (const [typeKey, url] of Object.entries(ROOM_TYPE_PHOTOS)) {
     if (key.includes(typeKey)) return url;

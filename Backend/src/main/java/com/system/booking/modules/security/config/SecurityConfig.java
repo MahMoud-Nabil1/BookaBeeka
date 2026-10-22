@@ -42,11 +42,12 @@ public class SecurityConfig {
 
                         // Public Auth & Onboarding endpoints
                         .requestMatchers("/api/auth/**").permitAll()
-                        .requestMatchers("/api/customers/register").permitAll()
+                        .requestMatchers("/api/customers/register", "/api/customer/register").permitAll()
                         .requestMatchers("/api/admin/super/login").permitAll()
                         .requestMatchers("/api/tenants/subdomain/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/availability/search").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/availability/rooms/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/availability/catalog-version").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/reviews/service/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/reviews/room/**").permitAll()
                         
@@ -57,9 +58,11 @@ public class SecurityConfig {
                         .requestMatchers("/api/admin/super/**").hasRole("SUPER_ADMIN")
                         .requestMatchers(HttpMethod.POST, "/api/tenants/register").hasRole("SUPER_ADMIN")
 
-                        // Hotel Owner endpoints — register is public, all others require OWNER
+                        // Hotel Owner endpoints — register is public, admin management allows OWNER & ADMIN, all others require OWNER
                         .requestMatchers(HttpMethod.POST, "/api/v1/owner/register").permitAll()
+                        .requestMatchers("/api/v1/owner/admins/**").hasAnyRole("OWNER", "ADMIN")
                         .requestMatchers("/api/v1/owner/**").hasRole("OWNER")
+                        .requestMatchers("/api/v1/admin/**").hasAnyRole("ADMIN", "OWNER")
                         .requestMatchers(HttpMethod.GET, "/api/tenants/me").hasRole("OWNER")
                         .requestMatchers(HttpMethod.PUT, "/api/tenants/me").hasRole("OWNER")
 

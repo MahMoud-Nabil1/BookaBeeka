@@ -240,66 +240,139 @@ public class WalletPaymentService {
     // -------------------------------------------------------------------------
 
     /**
-     * Reverses a completed payment. Uses a pessimistic lock on the Payment record
-     * to prevent two concurrent refund requests from both reading COMPLETED before
-     * either writes REFUNDED (double-refund race condition).
+     * Handles the wallet refund when a booking is cancelled.
      *
-     * @param bookingId  booking to refund
-     * @param customerId customer to credit
-     * @param tenantId   tenant context — see class-level note on the trust limitation
-     *                   of this parameter
-     * @return REFUNDED Payment record
+     * <p>Called synchronously by {@link com.system.booking.modules.payment.internal.listener.PaymentBookingEventListener}
+     * within the cancellation transaction.
+     *
+     * <p>Invariants enforced:
+     * <ul>
+     *   <li>Only bookings with a COMPLETED payment are refunded.</li>
+     *   <li>Unpaid bookings (PENDING_PAYMENT) receive 0 refund and write no ledger entry.</li>
+     *   <li>Refund amount respects the cancellation policy tier passed in the event (including partial or 0% refunds).</li>
+     *   <li>Pessimistic write lock on Payment prevents concurrent double refunds.</li>
+     *   <li>Customer wallet is locked and credited; tenant revenue wallet is debited.</li>
+     *   <li>Immutable REFUND ledger entry is persisted with audit link to payment and booking.</li>
+     * </ul>
+     *
+     * @param bookingId        UUID of the cancelled booking
+     * @param customerId       UUID of the customer who booked
+     * @param tenantId         tenant context
+     * @param refundAmount     calculated refundable amount (from policy)
+     * @param refundPercentage percentage applied (0 to 100)
+     * @return updated Payment record if a payment was refunded, or Optional.empty() if no refund was applicable
      */
     @Transactional(timeout = 10)
-    public Payment refundPayment(UUID bookingId, UUID customerId, UUID tenantId) {
+    public Optional<Payment> processBookingRefund(UUID bookingId, UUID customerId, UUID tenantId,
+                                                  BigDecimal refundAmount, Integer refundPercentage) {
 
-        log.info("Refund request for booking [{}], customer [{}]", bookingId, customerId);
+        log.info("Processing cancellation refund for booking [{}], customer [{}], amount: {}, percentage: {}%",
+                bookingId, customerId, refundAmount, refundPercentage);
 
-        // Fix 6: Locked fetch — prevents double-refund race condition
-        Payment payment = paymentRepository
-                .findFirstByBookingIdAndStatusWithLock(bookingId, PaymentStatus.COMPLETED)  // Fix 2: enum
-                .orElseThrow(() -> new EntityNotFoundException(
-                        String.format("No COMPLETED payment found for booking [%s]. Refund aborted.", bookingId)));
+        // Guard 1: Zero or negative refund amount (e.g. non-refundable or unpaid)
+        if (refundAmount == null || refundAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            Optional<Payment> completedPayment = paymentRepository
+                    .findFirstByBookingIdAndStatusWithLock(bookingId, PaymentStatus.COMPLETED);
+            if (completedPayment.isPresent()) {
+                log.info("Booking [{}] was cancelled with 0% refund per policy. Payment [{}] remains COMPLETED with no wallet credit.",
+                        bookingId, completedPayment.get().getId());
+                return completedPayment;
+            }
+            log.info("Booking [{}] cancelled without paid payment. No refund required.", bookingId);
+            return Optional.empty();
+        }
 
-        BigDecimal refundAmount = payment.getAmount();
+        // Guard 2: Pessimistic write lock on COMPLETED payment to prevent concurrent duplicate refunds
+        Optional<Payment> paymentOpt = paymentRepository
+                .findFirstByBookingIdAndStatusWithLock(bookingId, PaymentStatus.COMPLETED);
 
-        CustomerWallet wallet = findWalletWithLock(customerId);
+        if (paymentOpt.isEmpty()) {
+            log.warn("Cancellation refund for booking [{}] aborted: no COMPLETED payment found (already refunded or never paid).", bookingId);
+            return Optional.empty();
+        }
 
-        BigDecimal newBalance = wallet.getBalance().add(refundAmount);
+        Payment payment = paymentOpt.get();
 
-        // The max-balance cap (Fix 10) intentionally does NOT block refunds: a customer
-        // must always get their money back even if that pushes them past the configured
-        // ceiling. We only log so the situation is visible/auditable, not silently hidden.
+        // Never refund more than the total paid amount
+        BigDecimal actualRefund = refundAmount.min(payment.getAmount());
+
+        UUID effectiveCustomerId = customerId;
+        if (effectiveCustomerId == null && payment.getBooking() != null) {
+            effectiveCustomerId = payment.getBooking().getCustomerId();
+        }
+
+        CustomerWallet wallet = findWalletWithLock(effectiveCustomerId);
+
+        BigDecimal newBalance = wallet.getBalance().add(actualRefund);
+
         if (newBalance.compareTo(maxWalletBalance) > 0) {
-            log.warn("Refund for booking [{}] brings customer [{}] balance to {} {}, which exceeds the " +
-                            "configured max of {} — proceeding anyway since refunds must never be blocked.",
-                    bookingId, customerId, newBalance, wallet.getCurrency(), maxWalletBalance);
+            log.warn("Refund for booking [{}] brings customer [{}] balance to {} {}, which exceeds max {} — proceeding anyway.",
+                    bookingId, effectiveCustomerId, newBalance, wallet.getCurrency(), maxWalletBalance);
         }
 
         wallet.setBalance(newBalance);
         customerWalletRepository.save(wallet);
 
+        String description = (refundPercentage != null)
+                ? String.format("Refund (%d%%) for cancelled booking %s", refundPercentage, bookingId)
+                : "Refund for cancelled booking " + bookingId;
+
         walletTransactionRepository.save(WalletTransaction.builder()
                 .wallet(wallet)
                 .booking(buildBookingRef(bookingId))
-                .payment(payment)                         // audit link: which Payment is being reversed
-                .amount(refundAmount)
-                .transactionType(TransactionType.REFUND)     // Fix 2: enum
+                .payment(payment)
+                .amount(actualRefund)
+                .transactionType(TransactionType.REFUND)
                 .balanceAfter(newBalance)
-                .description("Refund for cancelled booking " + bookingId)
+                .description(description)
                 .build());
 
-        payment.setStatus(PaymentStatus.REFUNDED);           // Fix 2: enum
+        payment.setStatus(PaymentStatus.REFUNDED);
         payment = paymentRepository.save(payment);
 
-        debitTenantWallet(tenantId, refundAmount);
+        UUID effectiveTenantId = tenantId != null ? tenantId : payment.getTenantId();
+        debitTenantWallet(effectiveTenantId, actualRefund);
 
-        // Cancel the booking now that the refund has been issued: status → CANCELLED
-        bookingModuleApi.cancelBooking(tenantId, bookingId, "Payment refunded", null);
+        log.info("Refund COMPLETED for booking [{}]. Credited {} to customer [{}], new balance: {}",
+                bookingId, actualRefund, effectiveCustomerId, newBalance);
 
-        log.info("Refund COMPLETED for booking [{}]. Amount: {}, Customer new balance: {}",
-                bookingId, refundAmount, newBalance);
-        return payment;
+        return Optional.of(payment);
+    }
+
+    /**
+     * Reverses a completed payment directly via payment API.
+     * Uses a pessimistic lock on the Payment record to prevent race conditions.
+     *
+     * @param bookingId  booking to refund
+     * @param customerId customer to credit (optional; resolved from booking if null)
+     * @param tenantId   tenant context
+     * @return REFUNDED Payment record
+     */
+    @Transactional(timeout = 10)
+    public Payment refundPayment(UUID bookingId, UUID customerId, UUID tenantId) {
+
+        log.info("Direct refund request for booking [{}], customer [{}]", bookingId, customerId);
+
+        // Fetch with lock to check existence and prevent race condition
+        Payment payment = paymentRepository
+                .findFirstByBookingIdAndStatusWithLock(bookingId, PaymentStatus.COMPLETED)
+                .orElseThrow(() -> new EntityNotFoundException(
+                        String.format("No COMPLETED payment found for booking [%s]. Refund aborted.", bookingId)));
+
+        UUID effectiveTenantId = tenantId != null ? tenantId : payment.getTenantId();
+        UUID effectiveCustomerId = customerId != null ? customerId :
+                (payment.getBooking() != null ? payment.getBooking().getCustomerId() : customerId);
+
+        // Attempt cancellation if not yet cancelled; cancelBooking triggers processBookingRefund via domain event
+        try {
+            bookingModuleApi.cancelBooking(effectiveTenantId, bookingId, "Payment refunded by admin", null);
+            return paymentRepository.findById(payment.getId()).orElse(payment);
+        } catch (com.system.booking.modules.booking.internal.exception.IllegalBookingStateTransitionException e) {
+            // If already cancelled, process the refund directly
+            log.info("Booking [{}] is already in CANCELLED state. Executing direct wallet refund.", bookingId);
+            return processBookingRefund(bookingId, effectiveCustomerId, effectiveTenantId, payment.getAmount(), 100)
+                    .orElse(payment);
+        }
     }
 
     // -------------------------------------------------------------------------

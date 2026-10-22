@@ -43,9 +43,7 @@ public class CloudinaryService {
         // Parameters that will be signed — must match what the frontend sends to Cloudinary
         Map<String, Object> params = new TreeMap<>();
         params.put("folder", folder);
-        params.put("public_id", publicId);
         params.put("timestamp", timestamp);
-        params.put("allowed_formats", ALLOWED_FORMATS);
 
         String signature = cloudinary.apiSignRequest(params, cloudinary.config.apiSecret,
                 cloudinary.config.signatureVersion);

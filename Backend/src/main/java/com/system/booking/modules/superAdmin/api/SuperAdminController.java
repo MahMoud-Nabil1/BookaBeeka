@@ -9,9 +9,12 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
+import com.system.booking.modules.security.model.principal.HotelUserPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 @RestController
@@ -47,6 +50,33 @@ public class SuperAdminController {
         return ResponseEntity.ok(superAdminService.updateTenantStatus(tenantId, request.status()));
     }
 
+    @PostMapping("/tenants/{tenantId}/suspend")
+    public ResponseEntity<TenantSummaryResponse> suspendTenant(
+            @PathVariable UUID tenantId,
+            @RequestBody(required = false) SuspendTenantRequest request,
+            Authentication auth) {
+        String actor = resolveActor(auth);
+        String reason = request != null ? request.reason() : null;
+        return ResponseEntity.ok(superAdminService.suspendTenant(tenantId, reason, actor));
+    }
+
+    @PostMapping("/tenants/{tenantId}/unsuspend")
+    public ResponseEntity<TenantSummaryResponse> unsuspendTenant(
+            @PathVariable UUID tenantId,
+            Authentication auth) {
+        String actor = resolveActor(auth);
+        return ResponseEntity.ok(superAdminService.unsuspendTenant(tenantId, actor));
+    }
+
+    @DeleteMapping("/tenants/{tenantId}")
+    public ResponseEntity<Map<String, String>> deleteTenant(
+            @PathVariable UUID tenantId,
+            Authentication auth) {
+        String actor = resolveActor(auth);
+        superAdminService.deleteTenant(tenantId, actor);
+        return ResponseEntity.ok(Map.of("message", "Hotel successfully deleted"));
+    }
+
     @GetMapping("/customers")
     public ResponseEntity<Page<CustomerSummaryResponse>> listCustomers(
             @RequestParam(defaultValue = "0")  int page,
@@ -56,14 +86,45 @@ public class SuperAdminController {
 
     @PatchMapping("/customers/{customerId}/ban")
     public ResponseEntity<CustomerSummaryResponse> banCustomer(
-            @PathVariable UUID customerId) {
-        return ResponseEntity.ok(superAdminService.banCustomer(customerId));
+            @PathVariable UUID customerId,
+            Authentication auth) {
+        String actor = resolveActor(auth);
+        return ResponseEntity.ok(superAdminService.banCustomer(customerId, null, actor));
+    }
+
+    @PostMapping("/customers/{customerId}/ban")
+    public ResponseEntity<CustomerSummaryResponse> banCustomerWithReason(
+            @PathVariable UUID customerId,
+            @RequestBody(required = false) BanCustomerRequest request,
+            Authentication auth) {
+        String actor = resolveActor(auth);
+        String reason = request != null ? request.reason() : null;
+        return ResponseEntity.ok(superAdminService.banCustomer(customerId, reason, actor));
     }
 
     @PatchMapping("/customers/{customerId}/unban")
     public ResponseEntity<CustomerSummaryResponse> unbanCustomer(
-            @PathVariable UUID customerId) {
-        return ResponseEntity.ok(superAdminService.unbanCustomer(customerId));
+            @PathVariable UUID customerId,
+            Authentication auth) {
+        String actor = resolveActor(auth);
+        return ResponseEntity.ok(superAdminService.unbanCustomer(customerId, actor));
+    }
+
+    @PostMapping("/customers/{customerId}/unban")
+    public ResponseEntity<CustomerSummaryResponse> unbanCustomerPost(
+            @PathVariable UUID customerId,
+            Authentication auth) {
+        String actor = resolveActor(auth);
+        return ResponseEntity.ok(superAdminService.unbanCustomer(customerId, actor));
+    }
+
+    @DeleteMapping("/customers/{customerId}")
+    public ResponseEntity<Map<String, String>> deleteCustomer(
+            @PathVariable UUID customerId,
+            Authentication auth) {
+        String actor = resolveActor(auth);
+        superAdminService.deleteCustomer(customerId, actor);
+        return ResponseEntity.ok(Map.of("message", "Customer successfully deleted"));
     }
 
     @GetMapping("/transactions")
@@ -107,5 +168,27 @@ public class SuperAdminController {
     public ResponseEntity<List<ResourceResponse>> listRoomsByTenant(
             @PathVariable UUID tenantId) {
         return ResponseEntity.ok(superAdminService.listRoomsByTenant(tenantId));
+    }
+
+    private String resolveActor(Authentication auth) {
+        if (auth == null) return "SUPER_ADMIN";
+        if (auth.getPrincipal() instanceof HotelUserPrincipal p) {
+            if (p.email() != null && !p.email().isBlank()) {
+                return truncate(p.email(), 100);
+            }
+            if (p.id() != null) {
+                return truncate(p.id().toString(), 100);
+            }
+        }
+        String name = auth.getName();
+        if (name == null || name.isBlank()) {
+            return "SUPER_ADMIN";
+        }
+        return truncate(name, 100);
+    }
+
+    private String truncate(String s, int maxLen) {
+        if (s == null) return null;
+        return s.length() > maxLen ? s.substring(0, maxLen) : s;
     }
 }

@@ -22,4 +22,8 @@ public interface MediaPhotoRepository extends JpaRepository<MediaPhoto, UUID> {
     Optional<MediaPhoto> findByResourceIdAndIsPrimaryTrue(UUID resourceId);
 
     boolean existsByCloudinaryPublicId(String cloudinaryPublicId);
+
+    List<MediaPhoto> findByTenantId(UUID tenantId);
+
+    void deleteByTenantId(UUID tenantId);
 }

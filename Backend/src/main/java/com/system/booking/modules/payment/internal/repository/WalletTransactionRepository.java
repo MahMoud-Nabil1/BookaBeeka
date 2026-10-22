@@ -37,4 +37,6 @@ public interface WalletTransactionRepository extends JpaRepository<WalletTransac
             "LEFT JOIN FETCH wt.payment p " +
             "ORDER BY wt.createdAt DESC")
     Page<WalletTransaction> findAllWithDetailsOrderByCreatedAtDesc(Pageable pageable);
+
+    void deleteByWalletId(UUID walletId);
 }

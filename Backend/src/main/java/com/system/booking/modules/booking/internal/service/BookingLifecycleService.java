@@ -53,6 +53,10 @@ public class BookingLifecycleService {
 
     // called when a customer or admin cancels
     @Transactional
+    @org.springframework.cache.annotation.Caching(evict = {
+            @org.springframework.cache.annotation.CacheEvict(value = com.system.booking.common.config.CacheConfig.CACHE_OWNER_DASHBOARD, allEntries = true),
+            @org.springframework.cache.annotation.CacheEvict(value = com.system.booking.common.config.CacheConfig.CACHE_OWNER_REVENUE, allEntries = true)
+    })
     public CancellationResultDto cancelBooking(UUID tenantId, UUID bookingId, String reason, UUID actorId) {
         Booking booking = findBooking(tenantId, bookingId);
         stateMachine.assertTransitionAllowed(booking.getStatus(), BookingStatus.CANCELLED);
@@ -82,7 +86,22 @@ public class BookingLifecycleService {
         }
 
         eventPublisher.publishEvent(new BookingCancelledEvent(
-                booking.getId(), resolvedTenantId, refundAmount, reason));
+                booking.getId(),
+                resolvedTenantId,
+                booking.getCustomerId(),
+                booking.getRoomId(),
+                actorId,
+                booking.getCheckIn(),
+                booking.getCheckOut(),
+                booking.getStartTime(),
+                booking.getEndTime(),
+                booking.getTotalAmount(),
+                booking.getCurrency() != null ? booking.getCurrency() : "USD",
+                refundAmount,
+                refundPercentage,
+                reason,
+                OffsetDateTime.now()
+        ));
 
         log.info("Booking {} cancelled, refund {}% ({})", bookingId, refundPercentage, refundAmount);
 

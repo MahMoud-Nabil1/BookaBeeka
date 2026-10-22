@@ -12,6 +12,7 @@ import lombok.experimental.SuperBuilder;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
 
+import java.time.LocalDateTime;
 import java.util.Map;
 
 @Getter
@@ -41,4 +42,13 @@ public class Tenant extends BaseEntity {
 
     @Column(name = "currency", length = 3)
     private String currency;
+
+    @Column(name = "suspended_at")
+    private LocalDateTime suspendedAt;
+
+    @Column(name = "suspended_by", length = 255)
+    private String suspendedBy;
+
+    @Column(name = "suspended_reason", columnDefinition = "text")
+    private String suspendedReason;
 }

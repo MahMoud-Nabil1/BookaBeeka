@@ -1,5 +1,6 @@
 package com.system.booking.modules.inventory.internal.service;
 
+import com.system.booking.common.config.CacheConfig;
 import com.system.booking.modules.inventory.internal.dto.request.CreateAmenityRequest;
 import com.system.booking.modules.inventory.internal.dto.request.UpdateAmenityRequest;
 import com.system.booking.modules.inventory.internal.dto.response.AmenityResponse;
@@ -14,6 +15,9 @@ import com.system.booking.modules.inventory.internal.repository.AmenityRepositor
 import com.system.booking.modules.inventory.internal.repository.ResourceAmenityRepository;
 import com.system.booking.modules.inventory.internal.repository.ResourceRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,12 +50,10 @@ public class AmenityService {
 
     /**
      * Creates a new amenity scoped to the given tenant.
-     *
-     * <p>Performs an application-level duplicate check (case-insensitive, tenant-scoped)
-     * before persisting, mirroring the {@code uk_amenity_tenant_name} DB constraint
-     * with a user-friendly error message.</p>
+     * Evicts the amenity list cache for this tenant so the next read is fresh.
      */
     @Transactional
+    @CacheEvict(value = CacheConfig.CACHE_AMENITIES, key = "#tenantId")
     public AmenityResponse createAmenity(UUID tenantId, CreateAmenityRequest req) {
         if (amenityRepository.existsByTenantIdAndNameIgnoreCase(tenantId, req.name().trim())) {
             throw new DuplicateInventoryEntityException("Amenity '" + req.name() + "' already exists for this tenant");
@@ -71,8 +73,10 @@ public class AmenityService {
 
     /**
      * Lists all amenities belonging to the given tenant.
+     * Cached by tenantId for 30 minutes — amenities are reference data that rarely change.
      */
     @Transactional(readOnly = true)
+    @Cacheable(value = CacheConfig.CACHE_AMENITIES, key = "#tenantId", unless = "#result == null")
     public List<AmenityResponse> listAmenities(UUID tenantId) {
         return amenityRepository.findByTenantId(tenantId).stream()
                 .map(this::toResponse)
@@ -92,9 +96,10 @@ public class AmenityService {
     }
 
     /**
-     * Updates an amenity, scoped to the given tenant.
+     * Updates an amenity. Evicts the amenity list cache for this tenant.
      */
     @Transactional
+    @CacheEvict(value = CacheConfig.CACHE_AMENITIES, key = "#tenantId")
     public AmenityResponse updateAmenity(UUID tenantId, UUID amenityId, UpdateAmenityRequest req) {
         Amenity amenity = amenityRepository.findByTenantIdAndId(tenantId, amenityId)
                 .orElseThrow(() -> new AmenityNotFoundException(amenityId));
@@ -115,9 +120,10 @@ public class AmenityService {
     }
 
     /**
-     * Deletes an amenity, scoped to the given tenant.
+     * Deletes an amenity. Evicts the amenity list cache for this tenant.
      */
     @Transactional
+    @CacheEvict(value = CacheConfig.CACHE_AMENITIES, key = "#tenantId")
     public void deleteAmenity(UUID tenantId, UUID amenityId) {
         Amenity amenity = amenityRepository.findByTenantIdAndId(tenantId, amenityId)
                 .orElseThrow(() -> new AmenityNotFoundException(amenityId));

@@ -101,27 +101,33 @@ public class MediaPhotoService {
         // 1. Validate tenant owns the resource
         Resource resource = findResourceForTenant(tenantId, resourceId);
 
-        // 2. Verify Cloudinary upload response signature
-        boolean signatureValid = cloudinaryService.verifyUploadResponse(
-                request.cloudinaryPublicId(), request.version(), request.signature());
-        if (!signatureValid) {
-            throw new IllegalArgumentException("Invalid Cloudinary upload response signature");
+        String publicId = request.getEffectivePublicId();
+        if (publicId == null || publicId.isBlank()) {
+            throw new IllegalArgumentException("publicId must not be blank");
+        }
+
+        // 2. Verify Cloudinary upload response signature if provided
+        if (request.version() != null && request.signature() != null) {
+            boolean signatureValid = cloudinaryService.verifyUploadResponse(
+                    publicId, request.version(), request.signature());
+            if (!signatureValid) {
+                throw new IllegalArgumentException("Invalid Cloudinary upload response signature");
+            }
         }
 
         // 3. Validate cloudinaryPublicId matches exact tenant + resource path
-        if (!cloudinaryService.isValidResourcePath(request.cloudinaryPublicId(), tenantId, resourceId)) {
+        if (!cloudinaryService.isValidResourcePath(publicId, tenantId, resourceId)) {
             throw new IllegalArgumentException(
                     "Cloudinary public_id does not match the expected resource path");
         }
 
         // 4. Check for duplicate public_id
-        if (mediaPhotoRepository.existsByCloudinaryPublicId(request.cloudinaryPublicId())) {
+        if (mediaPhotoRepository.existsByCloudinaryPublicId(publicId)) {
             throw new IllegalArgumentException("Photo with this Cloudinary public_id already exists");
         }
 
         // 5. Fetch authoritative metadata from Cloudinary Admin API
-        Map<String, Object> authMetadata = cloudinaryService.fetchAuthoritativeMetadata(
-                request.cloudinaryPublicId());
+        Map<String, Object> authMetadata = cloudinaryService.fetchAuthoritativeMetadata(publicId);
 
         String authFormat = (String) authMetadata.get("format");
         String authSecureUrl = (String) authMetadata.get("secure_url");
@@ -135,7 +141,7 @@ public class MediaPhotoService {
         // 6. Validate format from authoritative data
         if (authFormat == null || !ALLOWED_FORMATS.contains(authFormat.toLowerCase())) {
             // Delete the unsupported asset from Cloudinary
-            try { cloudinaryService.deleteAsset(request.cloudinaryPublicId()); } catch (Exception ignored) {}
+            try { cloudinaryService.deleteAsset(publicId); } catch (Exception ignored) {}
             throw new IllegalArgumentException(
                     "Unsupported image format: " + authFormat + ". Allowed: " + ALLOWED_FORMATS);
         }
@@ -143,7 +149,7 @@ public class MediaPhotoService {
         // 7. Validate file size from authoritative data
         if (authBytes != null && authBytes > maxFileSizeBytes) {
             // Delete the oversized asset from Cloudinary
-            try { cloudinaryService.deleteAsset(request.cloudinaryPublicId()); } catch (Exception ignored) {}
+            try { cloudinaryService.deleteAsset(publicId); } catch (Exception ignored) {}
             throw new IllegalArgumentException(
                     "File size " + authBytes + " bytes exceeds maximum allowed " + maxFileSizeBytes + " bytes");
         }
@@ -154,26 +160,26 @@ public class MediaPhotoService {
         long currentCount = mediaPhotoRepository.countByResourceId(resourceId);
         if (currentCount >= maxPhotosPerResource) {
             // Delete the asset from Cloudinary since we can't store it
-            try { cloudinaryService.deleteAsset(request.cloudinaryPublicId()); } catch (Exception ignored) {}
+            try { cloudinaryService.deleteAsset(publicId); } catch (Exception ignored) {}
             throw new PhotoLimitExceededException(
                     "Resource already has " + currentCount + " photos (max: " + maxPhotosPerResource + ")");
         }
 
-        // 9. First photo for this resource is automatically primary
-        boolean isFirstPhoto = (currentCount == 0);
+        // 9. First photo or explicitly requested is primary
+        boolean isPrimary = Boolean.TRUE.equals(request.isPrimary()) || (currentCount == 0);
 
         // 10. Persist with authoritative metadata
         MediaPhoto photo = MediaPhoto.builder()
                 .tenantId(tenantId)
                 .resource(resource)
-                .cloudinaryPublicId(request.cloudinaryPublicId())
+                .cloudinaryPublicId(publicId)
                 .secureUrl(authSecureUrl)
                 .originalFilename(request.originalFilename())
                 .format(authFormat)
                 .width(authWidth)
                 .height(authHeight)
                 .bytes(authBytes)
-                .isPrimary(isFirstPhoto)
+                .isPrimary(isPrimary)
                 .sortOrder((int) currentCount)
                 .altText(request.altText())
                 .build();
@@ -296,7 +302,8 @@ public class MediaPhotoService {
                 .collect(Collectors.toSet());
 
         // Validate all requested photo IDs belong to this resource
-        for (PhotoOrderEntry entry : request.photos()) {
+        List<PhotoOrderEntry> entries = request.getEffectiveEntries();
+        for (PhotoOrderEntry entry : entries) {
             if (!existingIds.contains(entry.photoId())) {
                 throw new IllegalArgumentException(
                         "Photo " + entry.photoId() + " does not belong to resource " + resourceId);
@@ -304,7 +311,7 @@ public class MediaPhotoService {
         }
 
         // Apply new sort orders
-        Map<UUID, Integer> newOrders = request.photos().stream()
+        Map<UUID, Integer> newOrders = entries.stream()
                 .collect(Collectors.toMap(PhotoOrderEntry::photoId, PhotoOrderEntry::sortOrder));
 
         for (MediaPhoto photo : existingPhotos) {
@@ -315,7 +322,7 @@ public class MediaPhotoService {
         }
         mediaPhotoRepository.saveAll(existingPhotos);
 
-        log.info("Photos reordered: resourceId={}, count={}", resourceId, request.photos().size());
+        log.info("Photos reordered: resourceId={}, count={}", resourceId, entries.size());
 
         return mediaPhotoRepository
                 .findByTenantIdAndResourceIdOrderBySortOrderAsc(tenantId, resourceId).stream()
@@ -334,8 +341,12 @@ public class MediaPhotoService {
     private MediaPhotoResponse toResponse(MediaPhoto photo) {
         return new MediaPhotoResponse(
                 photo.getId(),
+                photo.getTenantId(),
                 photo.getResource().getId(),
                 photo.getSecureUrl(),
+                photo.getCloudinaryPublicId(),
+                photo.getSecureUrl(),
+                photo.getCloudinaryPublicId(),
                 photo.getOriginalFilename(),
                 photo.getFormat(),
                 photo.getWidth(),

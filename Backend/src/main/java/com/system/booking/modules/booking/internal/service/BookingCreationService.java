@@ -1,6 +1,7 @@
 package com.system.booking.modules.booking.internal.service;
 
 import com.system.booking.modules.availability.api.AvailabilityModuleApi;
+import com.system.booking.modules.availability.internal.repository.RoomAvailabilityRepository;
 import com.system.booking.modules.booking.api.BookingConfirmationDto;
 import com.system.booking.modules.booking.api.CreateBookingRequestDto;
 import com.system.booking.modules.booking.internal.entity.Booking;
@@ -13,9 +14,14 @@ import com.system.booking.modules.inventory.internal.dto.response.ServiceOfferin
 import com.system.booking.modules.customer.internal.repository.CustomerRepository;
 import com.system.booking.modules.notification.api.event.NotificationEvent;
 import com.system.booking.modules.notification.api.model.NotificationType;
+import com.system.booking.modules.booking.internal.exception.CustomerBannedException;
+import com.system.booking.modules.booking.internal.exception.HotelSuspendedException;
+import com.system.booking.modules.tenant.internal.repository.TenantRepository;
+import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,10 +39,12 @@ public class BookingCreationService {
 
     private final BookingRepository bookingRepo;
     private final AvailabilityModuleApi availabilityApi;
+    private final RoomAvailabilityRepository roomAvailabilityRepository;
     private final InventoryModuleApi inventoryApi;
     private final IdempotencyService idempotencyService;
     private final ApplicationEventPublisher eventPublisher;
     private final CustomerRepository customerRepo;
+    private final TenantRepository tenantRepo;
 
     @Transactional
     public BookingConfirmationDto createBooking(CreateBookingRequestDto request, UUID customerId, String idempotencyKey) {
@@ -53,6 +61,25 @@ public class BookingCreationService {
             );
         }
 
+        // step 1b: customer ban check (must read fresh state directly from DB)
+        if (customerId != null) {
+            var customer = customerRepo.findById(customerId)
+                    .orElseThrow(() -> new EntityNotFoundException("Customer not found: " + customerId));
+            if (Boolean.TRUE.equals(customer.getBanned())) {
+                String reason = customer.getBanReason() != null && !customer.getBanReason().isBlank()
+                        ? ": " + customer.getBanReason()
+                        : ". Please contact customer support.";
+                throw new CustomerBannedException("Your account is currently banned from making bookings" + reason);
+            }
+        }
+
+        // step 1c: hotel active check (suspended or non-existent hotels cannot receive bookings)
+        var tenant = tenantRepo.findById(request.tenantId())
+                .orElseThrow(() -> new EntityNotFoundException("Hotel not found: " + request.tenantId()));
+        if (!"ACTIVE".equalsIgnoreCase(tenant.getStatus())) {
+            throw new HotelSuspendedException("This hotel is currently suspended or unavailable for bookings.");
+        }
+
         // step 2: resolve dates
         java.time.LocalDate checkIn = request.checkInDate() != null
                 ? request.checkInDate()
@@ -60,6 +87,15 @@ public class BookingCreationService {
         java.time.LocalDate checkOut = request.checkOutDate() != null
                 ? request.checkOutDate()
                 : (request.end() != null ? request.end().toLocalDate() : checkIn.plusDays(1));
+
+        // step 2b: validate date interval — check-in must be strictly before check-out.
+        // A zero-length or inverted interval cannot represent a valid stay and would be
+        // rejected by the PostgreSQL GIST exclusion constraint anyway; surface it early
+        // with a clean, descriptive error rather than a raw DataIntegrityViolationException.
+        if (!checkIn.isBefore(checkOut)) {
+            throw new SlotUnavailableException(
+                    "Check-in date must be before check-out date (received checkIn=" + checkIn + ", checkOut=" + checkOut + ")");
+        }
 
         // step 3: resolve price — from service offering if provided, else from room's pricePerNight × nights
         java.math.BigDecimal basePrice;
@@ -74,6 +110,18 @@ public class BookingCreationService {
         } else {
             // Hotel room booking: price = pricePerNight × nights
             java.math.BigDecimal price = room != null ? room.pricePerNight() : null;
+            if (price == null && room != null && room.specs() != null && room.specs().get("pricePerNight") != null) {
+                Object raw = room.specs().get("pricePerNight");
+                if (raw instanceof java.math.BigDecimal bd) {
+                    price = bd;
+                } else if (raw instanceof Number n) {
+                    price = java.math.BigDecimal.valueOf(n.doubleValue());
+                } else {
+                    try {
+                        price = new java.math.BigDecimal(raw.toString().trim());
+                    } catch (Exception ignored) {}
+                }
+            }
             if (price == null && room != null && room.roomTypeId() != null) {
                 try {
                     var roomType = inventoryApi.getRoomTypeByTenantAndId(request.tenantId(), room.roomTypeId());
@@ -93,6 +141,16 @@ public class BookingCreationService {
 
         // step 4: hotel date-range availability check
         if (request.roomId() != null) {
+            // Acquire pessimistic row-level lock on the resource before checking availability.
+            // SELECT FOR UPDATE SKIP LOCKED serializes concurrent booking requests for the same
+            // room without blocking unrelated rooms. If the lock cannot be acquired (another
+            // transaction is mid-booking for this room), treat it as unavailable immediately.
+            boolean locked = roomAvailabilityRepository.lockResourceForBooking(request.roomId());
+            if (!locked) {
+                throw new SlotUnavailableException(
+                        "Room is temporarily unavailable — another booking is being processed");
+            }
+
             boolean available = availabilityApi.isRoomAvailableForDates(
                     request.roomId(), checkIn, checkOut);
             if (!available) {
@@ -117,7 +175,17 @@ public class BookingCreationService {
                 .totalAmount(basePrice.multiply(java.math.BigDecimal.valueOf(rooms)))
                 .currency(room != null && room.currency() != null ? room.currency() : "USD")
                 .build();
-        final Booking savedBooking = bookingRepo.save(booking);
+        final Booking savedBooking;
+        try {
+            savedBooking = bookingRepo.save(booking);
+        } catch (DataIntegrityViolationException e) {
+            // The PostgreSQL GIST exclusion constraint (no_overlapping_room_bookings) fired.
+            // This happens when two concurrent requests both pass the availability check but
+            // only one can commit. Translate the raw DB error into a clean domain exception
+            // so the caller receives a 409 instead of an unhandled 500.
+            throw new SlotUnavailableException(
+                    "Room is not available for the requested dates — a concurrent booking was committed first");
+        }
 
         OffsetDateTime createdAtOdt = savedBooking.getCreatedAt() != null
                 ? savedBooking.getCreatedAt().atOffset(ZoneOffset.UTC)

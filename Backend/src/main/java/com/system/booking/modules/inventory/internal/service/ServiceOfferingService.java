@@ -1,5 +1,6 @@
 package com.system.booking.modules.inventory.internal.service;
 
+import com.system.booking.common.config.CacheConfig;
 import com.system.booking.modules.inventory.internal.dto.request.CreateServiceOfferingRequest;
 import com.system.booking.modules.inventory.internal.dto.request.UpdateServiceOfferingRequest;
 import com.system.booking.modules.inventory.internal.dto.response.ServiceOfferingResponse;
@@ -8,6 +9,9 @@ import com.system.booking.modules.inventory.internal.exception.DuplicateInventor
 import com.system.booking.modules.inventory.internal.exception.ServiceOfferingNotFoundException;
 import com.system.booking.modules.inventory.internal.repository.ServiceOfferingRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,7 +25,11 @@ public class ServiceOfferingService {
 
     private final ServiceOfferingRepository serviceOfferingRepository;
 
+    /**
+     * Creates a service offering. Evicts the list cache for this tenant.
+     */
     @Transactional
+    @CacheEvict(value = CacheConfig.CACHE_SERVICE_OFFERINGS, key = "#tenantId")
     public ServiceOfferingResponse createServiceOffering(UUID tenantId, CreateServiceOfferingRequest req) {
         if (serviceOfferingRepository.existsByTenantIdAndNameIgnoreCase(tenantId, req.name().trim())) {
             throw new DuplicateInventoryEntityException("Service offering '" + req.name() + "' already exists for this tenant");
@@ -42,7 +50,11 @@ public class ServiceOfferingService {
         return toResponse(offering);
     }
 
+    /**
+     * Updates a service offering. Evicts the list cache for this tenant.
+     */
     @Transactional
+    @CacheEvict(value = CacheConfig.CACHE_SERVICE_OFFERINGS, key = "#tenantId")
     public ServiceOfferingResponse updateServiceOffering(UUID tenantId, UUID serviceOfferingId, UpdateServiceOfferingRequest req) {
         ServiceOffering offering = serviceOfferingRepository.findByTenantIdAndId(tenantId, serviceOfferingId)
                 .orElseThrow(() -> new ServiceOfferingNotFoundException(serviceOfferingId));
@@ -65,7 +77,12 @@ public class ServiceOfferingService {
         return toResponse(offering);
     }
 
+    /**
+     * Lists all service offerings for a tenant.
+     * Cached by tenantId — evicted on any write for this tenant.
+     */
     @Transactional(readOnly = true)
+    @Cacheable(value = CacheConfig.CACHE_SERVICE_OFFERINGS, key = "#tenantId", unless = "#result == null")
     public List<ServiceOfferingResponse> listServiceOfferings(UUID tenantId) {
         return serviceOfferingRepository.findByTenantId(tenantId).stream()
                 .map(this::toResponse)
@@ -79,7 +96,11 @@ public class ServiceOfferingService {
         return toResponse(offering);
     }
 
+    /**
+     * Deletes a service offering. Evicts the list cache for this tenant.
+     */
     @Transactional
+    @CacheEvict(value = CacheConfig.CACHE_SERVICE_OFFERINGS, key = "#tenantId")
     public void deleteServiceOffering(UUID tenantId, UUID serviceOfferingId) {
         ServiceOffering offering = serviceOfferingRepository.findByTenantIdAndId(tenantId, serviceOfferingId)
                 .orElseThrow(() -> new ServiceOfferingNotFoundException(serviceOfferingId));

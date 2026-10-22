@@ -46,14 +46,22 @@ public class AvailabilityController {
     private final AvailabilityModuleApi availabilityModuleApi;
     private final ScheduleRuleService scheduleRuleService;
     private final AvailabilityExceptionService exceptionService;
+    private final com.system.booking.modules.availability.internal.service.CatalogVersionService catalogVersionService;
+
+    // ── Public Catalog Version Tracker ───────────────────────────
+
+    @GetMapping("/catalog-version")
+    public ResponseEntity<Map<String, Object>> getCatalogVersion() {
+        return ResponseEntity.ok(Map.of("version", catalogVersionService.getVersion()));
+    }
 
     // ── Hotel Room Search (public, no auth) ──────────────────────
 
     @GetMapping("/search")
     public ResponseEntity<Page<AvailableRoomResponse>> searchAvailableRooms(
             @RequestParam(required = false) UUID hotelId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkIn,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkOut,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkIn,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate checkOut,
             @RequestParam(required = false) String roomType,
             @RequestParam(required = false) String bedType,
             @RequestParam(required = false) Integer minCapacity,
@@ -63,11 +71,12 @@ public class AvailabilityController {
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
 
-        if (checkIn == null || checkOut == null) {
-            throw new IllegalArgumentException("checkIn and checkOut are required");
-        }
-        if (!checkIn.isBefore(checkOut)) {
-            throw new IllegalArgumentException("checkIn must be before checkOut");
+        if (checkIn != null && checkOut != null) {
+            if (!checkIn.isBefore(checkOut)) {
+                throw new IllegalArgumentException("checkIn must be before checkOut");
+            }
+        } else if (checkIn != null || checkOut != null) {
+            throw new IllegalArgumentException("checkIn and checkOut must both be provided or both omitted");
         }
 
         RoomSearchRequest request = new RoomSearchRequest(

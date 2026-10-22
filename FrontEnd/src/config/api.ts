@@ -3,9 +3,16 @@ import { store } from '../redux';
 import { logout } from '../redux/slices/authSlice';
 
 // Create base instance
+const getBaseUrl = (): string => {
+  const envUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081').trim();
+  if (envUrl.startsWith('http://') || envUrl.startsWith('https://')) {
+    return envUrl.replace(/\/+$/, '');
+  }
+  return `https://${envUrl.replace(/\/+$/, '')}`;
+};
+
 const api = axios.create({
-  // Backend runs on 8081; all paths below already include /api/...
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081',
+  baseURL: getBaseUrl(),
 });
 
 // Request interceptor: add JWT token

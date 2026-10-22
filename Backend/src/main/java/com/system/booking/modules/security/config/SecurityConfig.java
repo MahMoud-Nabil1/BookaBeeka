@@ -37,6 +37,9 @@ public class SecurityConfig {
                         .accessDeniedHandler(accessDeniedHandler)
                 )
                 .authorizeHttpRequests(auth -> auth
+                        // Public Health check endpoints (Render / cloud monitoring)
+                        .requestMatchers("/health", "/api/health").permitAll()
+
                         // Public Auth & Onboarding endpoints
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/customers/register", "/api/customer/register").permitAll()

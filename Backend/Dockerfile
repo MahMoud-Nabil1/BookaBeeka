@@ -26,10 +26,12 @@ COPY --from=builder --chown=appuser:appgroup /app/target/*.jar app.jar
 
 USER appuser
 
-# Expose default application port
-EXPOSE 8081
+# Dynamic PORT assigned by Render (falls back to 8081 for local/docker-compose)
+ENV PORT=8081
 
-# JVM memory management tuned for containerized environments
+# JVM memory management tuned for containerized environments (e.g. Render free tier)
 ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Djava.security.egd=file:/dev/./urandom"
 
-ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
+EXPOSE 8081 8080
+
+ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -Dserver.port=${PORT} -jar app.jar"]
